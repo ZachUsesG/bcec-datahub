@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Database (NEVER commit these)
+datahub.db
+datahub.db-journal
+datahub.sqbpro
+
+# Frontend
+node_modules/
+dist/
+build/
+
+# OS
+.DS_Store
