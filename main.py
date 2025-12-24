@@ -1,11 +1,16 @@
 from dotenv import load_dotenv
 load_dotenv()
-from fastapi import FastAPI
-from api.routes import router
-from fastapi import FastAPI
+
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+
 from api.routes import router
-from fastapi import FastAPI, Header, HTTPException, Depends
+from api.auth import require_exec_password
+from db.session import engine
+from db.models import Base
+
+# Create tables on startup (safe for Postgres + SQLite)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -19,30 +24,12 @@ app.add_middleware(
 
 app.include_router(router)
 
+
 @app.get("/health")
 def health_check():
     return {"ok": True}
 
-import os
-from fastapi import Header, HTTPException
 
-def require_exec_password(
-    x_exec_password: str | None = Header(default=None)
-):
-    expected = os.getenv("BCEC_ADMIN_TOKEN")
-
-    if not expected:
-        raise HTTPException(
-            status_code=500,
-            detail="BCEC_ADMIN_TOKEN not set on server"
-        )
-
-    if not x_exec_password or x_exec_password != expected:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid exec password"
-        )
-    
 @app.get("/exec/verify")
 def exec_verify(_=Depends(require_exec_password)):
     return {"ok": True}
