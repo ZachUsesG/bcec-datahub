@@ -72,70 +72,89 @@ function App() {
       setIsExecVerified(false);
     }
   };
+  const apiFetch = async (url) => {
+    const res = await fetch(url, {
+      headers: execPassword
+        ? { "X-Exec-Password": execPassword }
+        : {}
+    });
 
+    if (!res.ok) {
+      console.error("API error:", url, await res.text());
+      return null;
+    }
+
+    return res.json();
+  };
   /* ---------------- Fetch data ---------------- */
 
-  useEffect(() => {
-    if (!isValidSemester) return;
+useEffect(() => {
+  if (!isValidSemester) return;
 
-    const fetchData = async () => {
-      setLoading(true);
-      let combined = [];
+  const fetchData = async () => {
+    setLoading(true);
+    let combined = [];
 
-      if (filters.alumniStatus === "both") {
-        const [alumniRes, activeRes] = await Promise.all([
-          fetch(`${API_BASE}/get_alumni_members?semester=${currentSemester}`),
-          fetch(`${API_BASE}/get_active_members?semester=${currentSemester}`)
-        ]);
+    if (filters.alumniStatus === "both") {
+      const alumniData = await apiFetch(
+        `${API_BASE}/get_alumni_members?semester=${currentSemester}`
+      );
+      const activeData = await apiFetch(
+        `${API_BASE}/get_active_members?semester=${currentSemester}`
+      );
 
-        const alumniData = await alumniRes.json();
-        const activeData = await activeRes.json();
+      const safeAlumni = Array.isArray(alumniData) ? alumniData : [];
+      const safeActive = Array.isArray(activeData) ? activeData : [];
 
-        const map = new Map();
-        [...alumniData, ...activeData].forEach(p => map.set(p.Person_id, p));
-        combined = Array.from(map.values());
-      } else {
-        const endpoint =
-          filters.alumniStatus === "active"
-            ? "get_active_members"
-            : "get_alumni_members";
+      const map = new Map();
+      [...safeAlumni, ...safeActive].forEach(p =>
+        map.set(p.Person_id, p)
+      );
+      combined = Array.from(map.values());
+    } else {
+      const endpoint =
+        filters.alumniStatus === "active"
+          ? "get_active_members"
+          : "get_alumni_members";
 
-        const res = await fetch(
-          `${API_BASE}/${endpoint}?semester=${currentSemester}`
-        );
-        combined = await res.json();
+      const data = await apiFetch(
+        `${API_BASE}/${endpoint}?semester=${currentSemester}`
+      );
+      combined = Array.isArray(data) ? data : [];
+    }
+
+    setAlumni(combined);
+
+    const historyMap = {};
+    for (const person of combined) {
+      const history = await apiFetch(
+        `${API_BASE}/get_membership_history?person_id=${person.Person_id}`
+      );
+      historyMap[person.Person_id] = Array.isArray(history) ? history : [];
+    }
+    setMemberships(historyMap);
+
+    if (combined.length > 0) {
+      const ids = combined.map(p => p.Person_id);
+      const rows = await apiFetch(
+        `${API_BASE}/external_profiles?` +
+          ids.map(id => `person_ids=${id}`).join("&")
+      );
+
+      const profileMap = {};
+      if (Array.isArray(rows)) {
+        rows.forEach(p => (profileMap[p.Person_id] = p));
       }
+      setExternalProfiles(profileMap);
+    } else {
+      setExternalProfiles({});
+    }
 
-      setAlumni(combined);
+    setLoading(false);
+  };
 
-      const historyMap = {};
-      for (const person of combined) {
-        const res = await fetch(
-          `${API_BASE}/get_membership_history?person_id=${person.Person_id}`
-        );
-        historyMap[person.Person_id] = await res.json();
-      }
-      setMemberships(historyMap);
-
-      if (combined.length > 0) {
-        const ids = combined.map(p => p.Person_id);
-        const res = await fetch(
-          `${API_BASE}/external_profiles?` +
-            ids.map(id => `person_ids=${id}`).join("&")
-        );
-        const rows = await res.json();
-        const map = {};
-        rows.forEach(p => (map[p.Person_id] = p));
-        setExternalProfiles(map);
-      } else {
-        setExternalProfiles({});
-      }
-
-      setLoading(false);
-    };
-
-    fetchData();
-  }, [filters.alumniStatus, currentSemester, isValidSemester]);
+  fetchData();
+}, [filters.alumniStatus, currentSemester, isValidSemester]);
 
   /* ---------------- Derived filters ---------------- */
 
