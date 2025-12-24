@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router
 from api.auth import require_exec_password
 from db.session import engine
-from db.models import Base
+from db.session import Base
 
 # Create tables on startup (safe for Postgres + SQLite)
 Base.metadata.create_all(bind=engine)
