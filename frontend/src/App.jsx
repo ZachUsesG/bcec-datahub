@@ -1,5 +1,10 @@
+const API_BASE =
+  import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
+
 import { useEffect, useState, useMemo } from "react";
 import "./App.css";
+
+/* VITE_API_BASE=https://bcec-datahub-production.up.railway.app */
 
 const isValidSemesterFormat = s => /^\d{4}[SF]$/.test(s);
 
@@ -38,7 +43,7 @@ function App() {
 
   const verifyExecPassword = async password => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/exec/verify", {
+      const res = await fetch(`${API_BASE}/exec/verify`, {
         headers: { "X-Exec-Password": password }
       });
 
@@ -79,8 +84,8 @@ function App() {
 
       if (filters.alumniStatus === "both") {
         const [alumniRes, activeRes] = await Promise.all([
-          fetch(`http://127.0.0.1:8000/get_alumni_members?semester=${currentSemester}`),
-          fetch(`http://127.0.0.1:8000/get_active_members?semester=${currentSemester}`)
+          fetch(`${API_BASE}/get_alumni_members?semester=${currentSemester}`),
+          fetch(`${API_BASE}/get_active_members?semester=${currentSemester}`)
         ]);
 
         const alumniData = await alumniRes.json();
@@ -96,7 +101,7 @@ function App() {
             : "get_alumni_members";
 
         const res = await fetch(
-          `http://127.0.0.1:8000/${endpoint}?semester=${currentSemester}`
+          `${API_BASE}/${endpoint}?semester=${currentSemester}`
         );
         combined = await res.json();
       }
@@ -106,7 +111,7 @@ function App() {
       const historyMap = {};
       for (const person of combined) {
         const res = await fetch(
-          `http://127.0.0.1:8000/get_membership_history?person_id=${person.Person_id}`
+          `${API_BASE}/get_membership_history?person_id=${person.Person_id}`
         );
         historyMap[person.Person_id] = await res.json();
       }
@@ -115,7 +120,7 @@ function App() {
       if (combined.length > 0) {
         const ids = combined.map(p => p.Person_id);
         const res = await fetch(
-          `http://127.0.0.1:8000/external_profiles?` +
+          `${API_BASE}/external_profiles?` +
             ids.map(id => `person_ids=${id}`).join("&")
         );
         const rows = await res.json();
@@ -340,7 +345,7 @@ function App() {
   disabled={!isValidSemesterFormat(edit.verified_semester)}
   onClick={async () => {
     const res = await fetch(
-      `http://127.0.0.1:8000/external_profiles/${person.Person_id}/manual`,
+        `${API_BASE}/external_profiles/${person.Person_id}/manual`,
       {
         method: "PATCH",
         headers: {

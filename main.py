@@ -10,7 +10,8 @@ from db.session import engine
 from db.session import Base
 
 # Create tables on startup (safe for Postgres + SQLite)
-Base.metadata.create_all(bind=engine)
+from db.models import metadata
+metadata.create_all(bind=engine)
 
 app = FastAPI()
 

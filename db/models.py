@@ -12,7 +12,7 @@ Person = Table(
     Column("linkedin", String(50)),
     Column("phone", Integer),
     Column("socials", String(50)),
-    Column("graduation_semester", Integer, nullable=True),
+    Column("graduation_semester", String(5), nullable=True),
 
 )
 

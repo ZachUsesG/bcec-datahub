@@ -7,33 +7,67 @@ from db.logic import (
     get_membership_history
 )
 from db.session import SessionLocal
-from db.models import Person, Membership, ExternalProfile
+from db.models import ExternalProfile
 
 from fastapi import Depends
 from pydantic import BaseModel
 from datetime import datetime
 
-from api.auth import require_exec_password
-from db.session import SessionLocal
-from db.models import ExternalProfile
+from api.auth import require_exec_password, is_exec
 
 router = APIRouter()
 
 
+from fastapi import Header
+
 @router.get("/get_active_members", tags=["members"])
-async def read_active(semester: str):
+async def read_active(
+    semester: str,
+    x_exec_password: str | None = Header(default=None),
+):
     session = SessionLocal()
     try:
-        return get_active_members(session, semester)
+        exec_user = is_exec(x_exec_password)
+
+        # 👇 ADD THIS LINE
+        print("EXEC CHECK (active):", exec_user, "HEADER:", x_exec_password)
+
+        rows = get_active_members(session, semester)
+
+        if exec_user:
+            return rows
+
+        # mask email for non-execs
+        return [
+            {**r, "email": None}
+            for r in rows
+        ]
     finally:
         session.close()
 
 
 @router.get("/get_alumni_members", tags=["alumni"])
-async def read_alumni(semester: str):
+async def read_alumni(
+    semester: str,
+    x_exec_password: str | None = Header(default=None),
+):
     session = SessionLocal()
     try:
-        return get_alumni_members(session, semester)
+        exec_user = is_exec(x_exec_password)
+
+        
+        # 👇 ADD THIS LINE
+        print("EXEC CHECK (alumni):", exec_user, "HEADER:", x_exec_password)
+
+        rows = get_alumni_members(session, semester)
+
+        if exec_user:
+            return rows
+
+        return [
+            {**r, "email": None}
+            for r in rows
+        ]
     finally:
         session.close()
 
