@@ -2,9 +2,10 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
+}
+h1 {
   text-align: center;
 }
-
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -42,8 +43,9 @@
 }
 
 .container {
-  padding: 3rem;
   max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem;
 }
 
 h1 {
@@ -57,9 +59,9 @@ h1 {
 }
 
 .table {
-  margin-top: 2rem;
-  display: grid;
-  row-gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .table-header,
