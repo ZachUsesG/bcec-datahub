@@ -470,6 +470,9 @@ useEffect(() => {
             })}
           </div>
           </div>
+          <div className="internal-tag">
+  Internal BCEC tool • Created by Zach Makari
+</div>
         </>
       )}
     </div>
