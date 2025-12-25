@@ -11,47 +11,38 @@ def get_last_semester(session, person_id):
 
 
 def get_active_members(session, semester):
+    last_membership = (
+        session.query(
+            Membership.c.Person_id,
+            func.max(Membership.c.start_semester).label("last_semester")
+        )
+        .group_by(Membership.c.Person_id)
+        .subquery()
+    )
+
     rows = (
         session.query(Person)
-        .filter(
-            session.query(Membership)
-            .filter(
-                Membership.c.Person_id == Person.c.Person_id,
-                Membership.c.start_semester == semester
-            )
-            .exists()
-        )
+        .join(last_membership, last_membership.c.Person_id == Person.c.Person_id)
+        .filter(last_membership.c.last_semester == semester)
         .all()
     )
 
-    rows.sort(
-        key=lambda p: get_last_semester(session, p.Person_id) or "",
-        reverse=True
-    )
-
     return [dict(row._mapping) for row in rows]
-
 
 def get_alumni_members(session, semester):
-    has_any_membership = (
-        session.query(Membership)
-        .filter(Membership.c.Person_id == Person.c.Person_id)
-        .exists()
-    )
-
-    active_this_semester = (
-        session.query(Membership)
-        .filter(
-            Membership.c.Person_id == Person.c.Person_id,
-            Membership.c.start_semester == semester
+    last_membership = (
+        session.query(
+            Membership.c.Person_id,
+            func.max(Membership.c.start_semester).label("last_semester")
         )
-        .exists()
+        .group_by(Membership.c.Person_id)
+        .subquery()
     )
 
     rows = (
         session.query(Person)
-        .filter(has_any_membership)
-        .filter(~active_this_semester)
+        .join(last_membership, last_membership.c.Person_id == Person.c.Person_id)
+        .filter(last_membership.c.last_semester < semester)
         .all()
     )
 
@@ -61,7 +52,6 @@ def get_alumni_members(session, semester):
     )
 
     return [dict(row._mapping) for row in rows]
-
 
 def get_membership_history(session, person_id):
     rows = (
