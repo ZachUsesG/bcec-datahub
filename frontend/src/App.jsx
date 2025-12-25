@@ -37,7 +37,7 @@ function App() {
 
   /* ---------------- Semester ---------------- */
   const [currentSemester, setCurrentSemester] = useState("2025F");
-  const isValidSemester = /^\d{4}[SF]$/.test(currentSemester);
+  const isValidSemester = isValidSemesterFormat(currentSemester);
 
   /* ---------------- Exec password verify ---------------- */
 
