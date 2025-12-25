@@ -13,7 +13,7 @@ const normalizeRole = role =>
   role === "ECP" ? "EVP" : role;
 
 const ROLE_LEGEND = {
-  EVP: "Executive Vice President",
+  EVP: "Vice President of External Affairs",
   IVP: "Internal Vice President",
   CM: "Committee Member",
   VPBA: "Vice President of Business Affairs",
