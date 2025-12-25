@@ -36,7 +36,6 @@ const ROLE_GROUPS = {
     "President",
     "EVP",
     "IVP",
-    "Exec",
     "VPBA",
     "VPCE",
     "VPDEIB",
