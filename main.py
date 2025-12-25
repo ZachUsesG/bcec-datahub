@@ -39,3 +39,7 @@ def health_check():
 @app.get("/exec/verify")
 def exec_verify(_=Depends(require_exec_password)):
     return {"ok": True}
+
+@app.get("/debug/cors")
+def debug_cors():
+    return {"cors": "alive"}
