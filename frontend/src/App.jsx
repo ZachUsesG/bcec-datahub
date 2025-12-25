@@ -49,6 +49,22 @@ const ROLE_GROUPS = {
     "Webmaster"
   ],
 
+  Directors: [
+    "Director of Beauty",
+    "Directorof Digital Marketing",
+    "Director of Fashion",
+    "Director of Film",
+    "Director of Games",
+    "Director of General Membership",
+    "Director of Marketing",
+    "Director of Media",
+    "Director of Music",
+    "Director of Sports",
+    "Director of Technology",
+    "Director of Television",
+    "Director of Video Games",
+  ],
+
   Advisors: [
     "Senior Advisor of Beauty",
     "Senior Advisor of Digital Marketing",
