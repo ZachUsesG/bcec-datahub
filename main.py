@@ -43,3 +43,10 @@ def exec_verify(_=Depends(require_exec_password)):
 @app.get("/debug/cors")
 def debug_cors():
     return {"cors": "alive"}
+
+@app.get("/debug/routes")
+def debug_routes():
+    return [
+        {"path": r.path, "methods": list(r.methods)}
+        for r in app.router.routes
+    ]
