@@ -1,6 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Query, Header, HTTPException
 from typing import List
-from fastapi import Query
 from db.logic import (
     get_active_members,
     get_alumni_members,
@@ -9,16 +8,12 @@ from db.logic import (
 from db.session import SessionLocal
 from db.models import ExternalProfile
 
-from fastapi import Depends
 from pydantic import BaseModel
 from datetime import datetime
 
 from api.auth import require_exec_password, is_exec
 
 router = APIRouter()
-
-
-from fastapi import Header
 
 @router.get("/get_active_members", tags=["members"])
 async def read_active(
@@ -141,6 +136,10 @@ def set_manual_override(
 
         session.commit()
         return {"ok": True}
+
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
     finally:
         session.close()
