@@ -16,19 +16,6 @@ metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://bcec-datahub.up.railway.app",
-        "https://bcec-datahub-production.up.railway.app",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 app.include_router(router)
 
 
@@ -51,3 +38,14 @@ def debug_routes():
         {"path": r.path, "methods": list(r.methods)}
         for r in app.router.routes
     ]
+
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+frontend_dist = Path(__file__).parent / "frontend" / "dist"
+
+app.mount(
+    "/",
+    StaticFiles(directory=frontend_dist, html=True),
+    name="frontend",
+)

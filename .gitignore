@@ -11,8 +11,9 @@ datahub.sqbpro
 
 # Frontend
 node_modules/
-dist/
 build/
 
 # OS
 .DS_Store
+
+!frontend/dist/
