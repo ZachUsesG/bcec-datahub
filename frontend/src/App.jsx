@@ -9,6 +9,26 @@ const API_BASE = (
 
 const isValidSemesterFormat = s => /^\d{4}[SF]$/.test(s);
 
+const normalizeRole = role =>
+  role === "ECP" ? "EVP" : role;
+
+const ROLE_LEGEND = {
+  EVP: "Executive Vice President",
+  IVP: "Internal Vice President", // confirm wording
+  VPBA: "Vice President of Business Affairs",
+  VPCE: "Vice President of Club Events",
+  VPDEIB: "Vice President of Diversity, Equity, Inclusion, and Belonging",
+  VPE: "Vice President of Executive",
+  VPF: "Vice President of Finance",
+  VPHR: "Vice President of Human Resources",
+  VPM: "Vice President of Membership",
+  VPMA: "Vice President of Member Affairs",
+  VPO: "Vice President of Operations",
+  VPP: "Vice President of Projects",
+  "General Member": "General Member",
+  Webmaster: "..Webmaster?"
+};
+
 function App() {
   const [alumni, setAlumni] = useState([]);
   const [memberships, setMemberships] = useState({});
