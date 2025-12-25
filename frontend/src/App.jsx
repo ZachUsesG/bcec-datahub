@@ -14,7 +14,8 @@ const normalizeRole = role =>
 
 const ROLE_LEGEND = {
   EVP: "Executive Vice President",
-  IVP: "Internal Vice President", // confirm wording
+  IVP: "Internal Vice President",
+  CM: "Committee Member",
   VPBA: "Vice President of Business Affairs",
   VPCE: "Vice President of Club Events",
   VPDEIB: "Vice President of Diversity, Equity, Inclusion, and Belonging",
@@ -25,7 +26,8 @@ const ROLE_LEGEND = {
   VPMA: "Vice President of Member Affairs",
   VPO: "Vice President of Operations",
   VPP: "Vice President of Projects",
-  "General Member": "General Member",
+  "General Member": "Member of General Membership",
+  "Senior Mentor": "General Senior Advisor I think,,",
   Webmaster: "..Webmaster?"
 };
 

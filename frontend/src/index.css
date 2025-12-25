@@ -69,3 +69,21 @@ button:focus-visible {
   cursor: help;
   text-decoration: underline dotted;
 }
+
+.multi-select {
+  min-height: 180px;
+  width: 100%;
+
+  resize: vertical;
+  overflow: auto;
+
+  padding: 0.5rem;
+  font-size: 0.9rem;
+
+  background-color: #111;
+  color: #eee;
+  border: 1px solid #444;
+  border-radius: 6px;
+
+  cursor: ns-resize;
+}
