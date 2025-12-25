@@ -160,7 +160,7 @@ Promise.all(
   };
 
   fetchData();
-}, [filters.alumniStatus, currentSemester, isValidSemester]);
+}, [filters.alumniStatus, currentSemester, isValidSemester, isExecVerified]);
 
   /* ---------------- Derived filters ---------------- */
 
