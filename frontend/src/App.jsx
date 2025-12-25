@@ -184,7 +184,7 @@ Promise.all(
 
   /* ---------------- Derived filters ---------------- */
 
-  onst availableRoles = useMemo(() => {
+  const availableRoles = useMemo(() => {
   const set = new Set();
   Object.values(memberships).forEach(history =>
     history.forEach(h => {
