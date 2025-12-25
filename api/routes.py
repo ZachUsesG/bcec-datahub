@@ -95,6 +95,7 @@ class ManualOverrideIn(BaseModel):
     manual_company: str | None = None
     verified_semester: str | None = None
 
+
 @router.patch("/external_profiles/{person_id}/manual")
 def set_manual_override(
     person_id: int,
@@ -114,27 +115,22 @@ def set_manual_override(
         if payload.verified_semester:
             values["last_verified_at"] = payload.verified_semester
 
-        row = session.execute(
-            ExternalProfile.select()
-            .where(ExternalProfile.c.Person_id == person_id)
-        ).first()
+        from sqlalchemy.dialects.postgresql import insert
 
-        if row:
-            session.execute(
-                ExternalProfile.update()
-                .where(ExternalProfile.c.Person_id == person_id)
-                .values(**values)
-            )
-        else:
-            session.execute(
-                ExternalProfile.insert().values(
-                    Person_id=person_id,
-                    data_source="manual",
-                    **values
-                )
-            )
+        stmt = insert(ExternalProfile).values(
+            Person_id=person_id,
+            data_source="manual",
+            **values
+        )
 
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["Person_id"],
+            set_=values
+        )
+
+        session.execute(stmt)
         session.commit()
+
         return {"ok": True}
 
     except Exception as e:
