@@ -8,9 +8,16 @@ def is_exec(x_exec_password: str | None) -> bool:
     return x_exec_password == expected
 
 
+from fastapi import Header, HTTPException, Request
+
 def require_exec_password(
+    request: Request,
     x_exec_password: str | None = Header(default=None)
 ):
+    # Allow CORS preflight
+    if request.method == "OPTIONS":
+        return
+
     expected = os.getenv("BCEC_ADMIN_TOKEN")
 
     if not expected:
