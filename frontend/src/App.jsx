@@ -31,6 +31,45 @@ const ROLE_LEGEND = {
   Webmaster: "..Webmaster?"
 };
 
+const ROLE_GROUPS = {
+  Executive: [
+    "President",
+    "EVP",
+    "IVP",
+    "Exec",
+    "VPBA",
+    "VPCE",
+    "VPDEIB",
+    "VPE",
+    "VPF",
+    "VPHR",
+    "VPM",
+    "VPMA",
+    "VPO",
+    "VPP",
+    "Webmaster"
+  ],
+
+  Advisors: [
+    "Senior Advisor of Beauty",
+    "Senior Advisor of Digital Marketing",
+    "Senior Advisor of Film",
+    "Senior Advisor of General Membership",
+    "Senior Advisor of Media",
+    "Senior Advisor of Music",
+    "Senior Advisor of Sports",
+    "Senior Advisor of Technology",
+    "Senior Advisor of Television",
+    "Senior Advisor of Video Games",
+    "Senior Mentor"
+  ],
+
+  "General / Other": [
+    "General Member",
+    "CM",
+  ]
+};
+
 function App() {
   const [alumni, setAlumni] = useState([]);
   const [memberships, setMemberships] = useState({});
@@ -296,23 +335,31 @@ useEffect(() => {
   className="multi-select"
   multiple
   value={[...filters.roles]}
-  onChange={e => setFilters(f => ({
-    ...f,
-    roles: new Set(Array.from(e.target.selectedOptions).map(o => o.value))
-  }))}
+  onChange={e =>
+    setFilters(f => ({
+      ...f,
+      roles: new Set(
+        Array.from(e.target.selectedOptions).map(o => o.value)
+      )
+    }))
+  }
 >
-  {availableRoles.map(rawRole => {
-    const role = normalizeRole(rawRole);
-    return (
-      <option
-        key={rawRole}
-        value={role}
-        title={ROLE_LEGEND[role] || role}
-      >
-        {role}
-      </option>
-    );
-  })}
+  {Object.entries(ROLE_GROUPS).map(([groupName, roles]) => (
+    <optgroup key={groupName} label={groupName}>
+      {roles
+        .map(r => normalizeRole(r))
+        .filter(r => availableRoles.includes(r))
+        .map(role => (
+          <option
+            key={role}
+            value={role}
+            title={ROLE_LEGEND[role] || role}
+          >
+            {role}
+          </option>
+        ))}
+    </optgroup>
+  ))}
 </select>
 
               <select className="multi-select" multiple value={[...filters.committees]}
