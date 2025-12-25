@@ -126,14 +126,19 @@ useEffect(() => {
     setAlumni(combined);
     console.log("RAW alumni:", combined.length);
 
-    const historyMap = {};
-    for (const person of combined) {
-      const history = await apiFetch(
-        `${API_BASE}/get_membership_history?person_id=${person.Person_id}`
-      );
-      historyMap[person.Person_id] = Array.isArray(history) ? history : [];
-    }
-    setMemberships(historyMap);
+    setLoading(false);
+
+const historyMap = {};
+Promise.all(
+  combined.map(async person => {
+    const history = await apiFetch(
+      `${API_BASE}/get_membership_history?person_id=${person.Person_id}`
+    );
+    historyMap[person.Person_id] = Array.isArray(history) ? history : [];
+  })
+).then(() => {
+  setMemberships(historyMap);
+});
 
     if (combined.length > 0) {
       const ids = combined.map(p => p.Person_id);
@@ -151,7 +156,6 @@ useEffect(() => {
       setExternalProfiles({});
     }
 
-    setLoading(false);
   };
 
   fetchData();
