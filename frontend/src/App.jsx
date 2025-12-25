@@ -351,9 +351,14 @@ useEffect(() => {
                   <div className="muted">{person.graduation_semester || "—"}</div>
 
                   <div className="muted">
-                    {history.filter(h => h.role).map((h, i) =>
-                      <div key={i}>• {h.role} ({h.start_semester})</div>
-                    )}
+{history.filter(h => h.role).map((h, i) => {
+  const role = normalizeRole(h.role);
+  return (
+    <div key={i} title={ROLE_LEGEND[role]}>
+      • {role} ({h.start_semester})
+    </div>
+  );
+})}
                   </div>
 
                   <div className="muted">
