@@ -184,13 +184,16 @@ Promise.all(
 
   /* ---------------- Derived filters ---------------- */
 
-  const availableRoles = useMemo(() => {
-    const set = new Set();
-    Object.values(memberships).forEach(history =>
-      history.forEach(h => h.role && set.add(h.role))
-    );
-    return Array.from(set).sort();
-  }, [memberships]);
+  onst availableRoles = useMemo(() => {
+  const set = new Set();
+  Object.values(memberships).forEach(history =>
+    history.forEach(h => {
+      if (!h.role) return;
+      set.add(normalizeRole(h.role));
+    })
+  );
+  return Array.from(set).sort();
+}, [memberships]);
 
   const availableCommittees = useMemo(() => {
     const set = new Set();
@@ -354,9 +357,14 @@ useEffect(() => {
 {history.filter(h => h.role).map((h, i) => {
   const role = normalizeRole(h.role);
   return (
-    <div key={i} title={ROLE_LEGEND[role]}>
-      • {role} ({h.start_semester})
-    </div>
+<div key={i}>
+  • <span
+      className="role-abbrev"
+      title={ROLE_LEGEND[role]}
+    >
+      {role}
+    </span> ({h.start_semester})
+</div>
   );
 })}
                   </div>
