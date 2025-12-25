@@ -1,3 +1,4 @@
+print("🚀 MAIN.PY LOADED")
 from dotenv import load_dotenv
 load_dotenv()
 
