@@ -59,9 +59,15 @@ h1 {
 }
 
 .table {
-  width: 100%;
-  max-width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
   overflow-x: auto;
+}
+
+
+.table-inner {
+  min-width: 1200px;
+  margin: 0 auto;
 }
 
 .table-header,

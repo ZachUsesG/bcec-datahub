@@ -301,6 +301,7 @@ useEffect(() => {
 
           {/* TABLE */}
           <div className="table">
+            <div className="table-inner">
             <div className="table-header">
               <div>Name</div>
               <div>Email {isExecVerified ? "" : "(Exec)"}</div>
@@ -466,6 +467,7 @@ useEffect(() => {
                 </div>
               );
             })}
+          </div>
           </div>
         </>
       )}
