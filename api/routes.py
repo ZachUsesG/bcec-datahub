@@ -119,11 +119,10 @@ def set_manual_override(
         if payload.verified_semester:
             values["last_verified_at"] = payload.verified_semester
 
-        row = (
-            session.query(ExternalProfile)
-            .filter(ExternalProfile.c.Person_id == person_id)
-            .first()
-        )
+        row = session.execute(
+            ExternalProfile.select()
+            .where(ExternalProfile.c.Person_id == person_id)
+        ).first()
 
         if row:
             session.execute(
@@ -133,14 +132,15 @@ def set_manual_override(
             )
         else:
             session.execute(
-            ExternalProfile.insert().values(
-            Person_id=person_id,
-            data_source="manual",
-            **values
-        )
+                ExternalProfile.insert().values(
+                    Person_id=person_id,
+                    data_source="manual",
+                    **values
+                )
             )
 
         session.commit()
         return {"ok": True}
+
     finally:
         session.close()
