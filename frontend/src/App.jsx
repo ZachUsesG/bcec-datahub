@@ -1,8 +1,6 @@
-const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
-
-import { useEffect, useState, useMemo } from "react";
-import "./App.css";
+const API_BASE = (
+  import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000"
+).replace(/\/+$/, "");
 
 /* VITE_API_BASE=https://bcec-datahub-production.up.railway.app */
 
@@ -124,6 +122,7 @@ useEffect(() => {
     }
 
     setAlumni(combined);
+    console.log("RAW alumni:", combined.length);
 
     const historyMap = {};
     for (const person of combined) {
@@ -176,33 +175,40 @@ useEffect(() => {
 
   /* ---------------- Filtering logic ---------------- */
 
-  const filteredAlumni = useMemo(() => {
-    const excluded = excludeTerms
-      .toLowerCase()
-      .split(",")
-      .map(s => s.trim())
-      .filter(Boolean);
+const filteredAlumni = useMemo(() => {
+  const excluded = excludeTerms
+    .toLowerCase()
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean);
 
-    return alumni.filter(person => {
-      const history = memberships[person.Person_id] || [];
-      const profile = externalProfiles[person.Person_id];
+  return alumni.filter(person => {
+    const history = memberships[person.Person_id] || [];
+    const profile = externalProfiles[person.Person_id];
 
-      if (filters.name && !person.name?.toLowerCase().includes(filters.name.toLowerCase())) return false;
-      if (filters.email && !person.email?.toLowerCase().includes(filters.email.toLowerCase())) return false;
-      if (filters.linkedin && !person.linkedin?.toLowerCase().includes(filters.linkedin.toLowerCase())) return false;
-      if (filters.graduationYear && person.graduation_semester?.toString() !== filters.graduationYear) return false;
+    if (filters.name && !person.name?.toLowerCase().includes(filters.name.toLowerCase())) return false;
+    if (filters.email && !person.email?.toLowerCase().includes(filters.email.toLowerCase())) return false;
+    if (filters.linkedin && !person.linkedin?.toLowerCase().includes(filters.linkedin.toLowerCase())) return false;
 
-      if (filters.roles.size > 0 && !history.some(h => h.role && filters.roles.has(h.role))) return false;
-      if (filters.committees.size > 0 && !history.some(h => h.committee && filters.committees.has(h.committee))) return false;
+    if (
+      filters.graduationYear &&
+      !person.graduation_semester?.startsWith(filters.graduationYear)
+    ) return false;
 
-      if (excluded.length > 0 && profile?.current_title) {
-        const title = profile.current_title.toLowerCase();
-        if (excluded.some(word => title.includes(word))) return false;
-      }
+    if (filters.roles.size > 0 && !history.some(h => h.role && filters.roles.has(h.role))) return false;
+    if (filters.committees.size > 0 && !history.some(h => h.committee && filters.committees.has(h.committee))) return false;
 
-      return true;
-    });
-  }, [alumni, memberships, filters, excludeTerms, externalProfiles]);
+    if (excluded.length > 0 && profile?.current_title) {
+      const title = profile.current_title.toLowerCase();
+      if (excluded.some(word => title.includes(word))) return false;
+    }
+
+    return true;
+  });
+}, [alumni, memberships, filters, excludeTerms, externalProfiles]);
+useEffect(() => {
+  console.log("FILTERED alumni:", filteredAlumni.length);
+}, [filteredAlumni]);
 
   /* ---------------- Render ---------------- */
 
