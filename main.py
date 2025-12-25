@@ -44,8 +44,15 @@ from pathlib import Path
 
 frontend_dist = Path(__file__).parent / "frontend" / "dist"
 
+from fastapi.responses import FileResponse
+
+@app.get("/")
+def serve_frontend():
+    return FileResponse(frontend_dist / "index.html")
+
 app.mount(
-    "/",
-    StaticFiles(directory=frontend_dist, html=True),
-    name="frontend",
+    "/assets",
+    StaticFiles(directory=frontend_dist / "assets"),
+    name="assets",
 )
+
