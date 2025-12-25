@@ -489,6 +489,8 @@ useEffect(() => {
   type="button"
   disabled={!isValidSemesterFormat(edit.verified_semester)}
   onClick={async () => {
+    console.log("Saving for", person.Person_id, edit);
+
     const res = await fetch(
         `${API_BASE}/external_profiles/${person.Person_id}/manual`,
       {
@@ -504,7 +506,8 @@ useEffect(() => {
         })
       }
     );
-
+const text = await res.text();
+console.log("Save response:", res.status, text);
     if (!res.ok) {
       alert("Invalid exec password");
       return;
