@@ -111,7 +111,7 @@ function App() {
   const [excludeTerms, setExcludeTerms] = useState("");
 
   /* ---------------- Semester ---------------- */
-  const [currentSemester, setCurrentSemester] = useState("2025F");
+  const [currentSemester, setCurrentSemester] = useState("2026S");
   const isValidSemester = isValidSemesterFormat(currentSemester);
 
   /* ---------------- Exec password verify ---------------- */
