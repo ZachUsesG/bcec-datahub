@@ -124,13 +124,12 @@ def set_manual_override(
         )
 
         stmt = stmt.on_conflict_do_update(
-            index_elements=["Person_id"],
+            constraint="ExternalProfile_Person_id_key",
             set_=values
         )
 
         session.execute(stmt)
         session.commit()
-
         return {"ok": True}
 
     except Exception as e:
