@@ -292,13 +292,28 @@ useEffect(() => {
             </div>
 
             <div className="filter-row">
-              <select className="multi-select" multiple value={[...filters.roles]}
-                onChange={e => setFilters(f => ({
-                  ...f,
-                  roles: new Set(Array.from(e.target.selectedOptions).map(o => o.value))
-                }))}>
-                {availableRoles.map(role => <option key={role}>{role}</option>)}
-              </select>
+<select
+  className="multi-select"
+  multiple
+  value={[...filters.roles]}
+  onChange={e => setFilters(f => ({
+    ...f,
+    roles: new Set(Array.from(e.target.selectedOptions).map(o => o.value))
+  }))}
+>
+  {availableRoles.map(rawRole => {
+    const role = normalizeRole(rawRole);
+    return (
+      <option
+        key={rawRole}
+        value={role}
+        title={ROLE_LEGEND[role] || role}
+      >
+        {role}
+      </option>
+    );
+  })}
+</select>
 
               <select className="multi-select" multiple value={[...filters.committees]}
                 onChange={e => setFilters(f => ({
