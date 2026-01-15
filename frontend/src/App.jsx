@@ -117,6 +117,9 @@ function App() {
   const [isExecVerified, setIsExecVerified] = useState(
     sessionStorage.getItem("execVerified") === "true"
   );
+  const [accessRole, setAccessRole] = useState(
+    sessionStorage.getItem("accessRole") || "none"
+  );
 
   const [excludeTerms, setExcludeTerms] = useState("");
 
@@ -133,23 +136,36 @@ function App() {
       });
 
       if (res.ok) {
+  const data = await res.json(); // { ok: true, role: "exec" | "editor" }
+
   setIsExecVerified(true);
+  setAccessRole(data.role);
+
   sessionStorage.setItem("execVerified", "true");
+  sessionStorage.setItem("accessRole", data.role);
 
   verifiedPasswordRef.current = password;
   sessionStorage.setItem("execPasswordVerified", password);
 } else {
-        setIsExecVerified(false);
+  setIsExecVerified(false);
+  setAccessRole("none");
+
   sessionStorage.removeItem("execVerified");
+  sessionStorage.removeItem("accessRole");
+
   verifiedPasswordRef.current = "";
   sessionStorage.removeItem("execPasswordVerified");
-      }
+}
     } catch {
-      setIsExecVerified(false);
+  setIsExecVerified(false);
+  setAccessRole("none");
+
   sessionStorage.removeItem("execVerified");
+  sessionStorage.removeItem("accessRole");
+
   verifiedPasswordRef.current = "";
   sessionStorage.removeItem("execPasswordVerified");
-    }
+}
   };
 
 const handlePasswordChange = value => {
@@ -164,16 +180,20 @@ const handlePasswordChange = value => {
 
   // If not exactly the verified password, drop exec immediately
   if (value !== verifiedPasswordRef.current) {
-    setIsExecVerified(false);
-    sessionStorage.removeItem("execVerified");
-  }
+  setIsExecVerified(false);
+  setAccessRole("none");
+  sessionStorage.removeItem("execVerified");
+  sessionStorage.removeItem("accessRole");
+}
 
   // If empty, clear verified record and stop
   if (!value) {
-    verifiedPasswordRef.current = "";
-    sessionStorage.removeItem("execPasswordVerified");
-    return;
-  }
+  verifiedPasswordRef.current = "";
+  setAccessRole("none");
+  sessionStorage.removeItem("execPasswordVerified");
+  sessionStorage.removeItem("accessRole");
+  return;
+}
 
   // Debounced verify
   verifyTimerRef.current = setTimeout(() => {
@@ -191,16 +211,19 @@ useEffect(() => {
 
   // If already verified for this exact password, keep exec on
   if (
-    execPassword === verifiedPasswordRef.current &&
-    sessionStorage.getItem("execVerified") === "true"
-  ) {
-    setIsExecVerified(true);
-    return;
-  }
+  execPassword === verifiedPasswordRef.current &&
+  sessionStorage.getItem("execVerified") === "true"
+) {
+  setIsExecVerified(true);
+  setAccessRole(sessionStorage.getItem("accessRole") || "exec"); // <- add this
+  return;
+}
 
   // Otherwise force off until verified
   setIsExecVerified(false);
   sessionStorage.removeItem("execVerified");
+  setAccessRole("none");
+  sessionStorage.removeItem("accessRole");
 
   verifyExecPassword(execPassword);
 
@@ -330,7 +353,7 @@ setLoading(false);
 };
 
   fetchData();
-}, [filters.alumniStatus, currentSemester, isValidSemester, isExecVerified]);
+}, [filters.alumniStatus, currentSemester, isValidSemester, isExecVerified, accessRole]);
 
   /* ---------------- Derived filters ---------------- */
 
@@ -400,10 +423,10 @@ useEffect(() => {
       <h1>BCEC Alumni</h1>
 
       {isExecVerified && (
-        <div className="exec-banner">
-          Exec access enabled
-        </div>
-      )}
+  <div className="exec-banner">
+    {accessRole === "editor" ? "Editor access enabled" : "Exec access enabled"}
+  </div>
+)}
 
       {loading ? (
         <p className="muted">Loading alumni…</p>
