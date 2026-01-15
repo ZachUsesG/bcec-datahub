@@ -182,8 +182,12 @@ const handlePasswordChange = value => {
   if (value !== verifiedPasswordRef.current) {
   setIsExecVerified(false);
   setAccessRole("none");
+
   sessionStorage.removeItem("execVerified");
   sessionStorage.removeItem("accessRole");
+
+  verifiedPasswordRef.current = "";
+  sessionStorage.removeItem("execPasswordVerified");
 }
 
   // If empty, clear verified record and stop
@@ -215,7 +219,7 @@ useEffect(() => {
   sessionStorage.getItem("execVerified") === "true"
 ) {
   setIsExecVerified(true);
-  setAccessRole(sessionStorage.getItem("accessRole") || "exec"); // <- add this
+  setAccessRole(sessionStorage.getItem("accessRole") || "none"); // <- add this
   return;
 }
 
