@@ -207,7 +207,6 @@ useEffect(() => {
 
 setAlumni(combined);
 console.log("RAW alumni:", combined.length);
-setLoading(false);
 
 const ids = combined
   .map(p => p.Person_id ?? p.person_id ?? p.personId)
@@ -233,7 +232,6 @@ const ids = combined
   }
 }
 
-// Bulk external profiles
 if (ids.length > 0) {
   const res = await fetch(`${API_BASE}/external_profiles/bulk`, {
     method: "POST",
@@ -251,7 +249,6 @@ if (ids.length > 0) {
   } else {
     const parsed = JSON.parse(text);
 
-    // backend might return either an object map OR an array
     if (parsed && !Array.isArray(parsed) && typeof parsed === "object") {
       setExternalProfiles(parsed);
     } else {
@@ -264,7 +261,10 @@ if (ids.length > 0) {
       setExternalProfiles(profileMap);
     }
   }
-} 
+} else {
+  setExternalProfiles({});
+}
+setLoading(false);
 
 };
 
@@ -312,7 +312,7 @@ const p = (pid != null ? externalProfiles[pid] : {}) || {};
 
     if (filters.graduationYear && !person.graduation_semester?.startsWith(filters.graduationYear)) return false;
 
-    if (filters.roles.size > 0 && !history.some(h => h.role && filters.roles.has(h.role))) return false;
+    if (filters.roles.size > 0 && !history.some(h => h.role && filters.roles.has(normalizeRole(h.role)))) return false;
     if (filters.committees.size > 0 && !history.some(h => h.committee && filters.committees.has(h.committee))) return false;
 
     // exclude keywords using manual_title first, then current_title
@@ -573,13 +573,21 @@ return (
               return;
             }
 
+            let saved = null;
+try {
+  saved = JSON.parse(text);
+} catch {
+  saved = null;
+}
+
             setExternalProfiles(prev => ({
               ...prev,
               [pid]: {
                 ...(prev[pid] || {}),
-                manual_title: payload.manual_title,
-                manual_company: payload.manual_company,
-                manual_updated_at: new Date().toISOString()
+    manual_title: saved?.manual_title ?? payload.manual_title,
+    manual_company: saved?.manual_company ?? payload.manual_company,
+    manual_updated_at: saved?.manual_updated_at ?? new Date().toISOString(),
+    data_source: saved?.data_source ?? prev?.[pid]?.data_source
               }
             }));
 
@@ -608,24 +616,41 @@ return (
     );
   }
 
-  return (
-    <div className="inline-display">
-      <div>{displayLine}</div>
-      <button
-        onClick={() =>
-          setEditing(prev => ({
-            ...prev,
-            [pid]: {
-              manual_title: p.manual_title ?? p.current_title ?? "",
-              manual_company: p.manual_company ?? p.current_company ?? ""
-            }
-          }))
-        }
-      >
-        Edit
-      </button>
+const isManual =
+  !!(p.manual_title || p.manual_company) || p.data_source === "manual";
+
+const sourceLabel = isManual
+  ? "Manual"
+  : (p.data_source ? p.data_source : "Unknown");
+
+const verified = p.last_verified_at ? `Verified: ${p.last_verified_at}` : null;
+const updated = p.manual_updated_at ? `Manual updated: ${p.manual_updated_at}` : null;
+
+return (
+  <div className="inline-display">
+    <div>{displayLine}</div>
+
+    <div className={`tiny ${isManual ? "manual" : ""}`}>
+      <span>{sourceLabel}</span>
+      {verified ? ` · ${verified}` : ""}
+      {updated ? ` · ${updated}` : ""}
     </div>
-  );
+
+    <button
+      onClick={() =>
+        setEditing(prev => ({
+          ...prev,
+          [pid]: {
+            manual_title: p.manual_title ?? p.current_title ?? "",
+            manual_company: p.manual_company ?? p.current_company ?? ""
+          }
+        }))
+      }
+    >
+      Edit
+    </button>
+  </div>
+);
 })()}
 </div>
 
