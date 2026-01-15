@@ -248,10 +248,19 @@ if (ids.length > 0) {
     setExternalProfiles({});
   } else {
     const rows = JSON.parse(text);
-    const profileMap = {};
-    if (Array.isArray(rows)) rows.forEach(p => (profileMap[p.Person_id] = p));
-    setExternalProfiles(profileMap);
-    console.log("Sample external profile:", Object.values(profileMap)[0]);
+if (parsed && !Array.isArray(parsed) && typeof parsed === "object") {
+  // backend returned a map already
+  setExternalProfiles(parsed);
+} else {
+  // backend returned an array
+  const rows = Array.isArray(parsed) ? parsed : [];
+  const profileMap = {};
+  rows.forEach(p => {
+    const pid = p.Person_id ?? p.person_id ?? p.personId;
+    if (pid != null) profileMap[pid] = p;
+  });
+  setExternalProfiles(profileMap);
+}
   }
 } 
 
