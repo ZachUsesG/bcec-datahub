@@ -205,43 +205,59 @@ useEffect(() => {
       combined = Array.isArray(data) ? data : [];
     }
 
-    setAlumni(combined);
-    console.log("RAW alumni:", combined.length);
+setAlumni(combined);
+console.log("RAW alumni:", combined.length);
+setLoading(false);
 
-    setLoading(false);
+const ids = combined.map(p => p.Person_id);
 
-const historyMap = {};
-Promise.all(
-  combined.map(async person => {
-    const history = await apiFetch(
-      `${API_BASE}/get_membership_history?person_id=${person.Person_id}`
-    );
-    historyMap[person.Person_id] = Array.isArray(history) ? history : [];
-  })
-).then(() => {
-  setMemberships(historyMap);
-});
+// Bulk membership history
+{
+  const res = await fetch(`${API_BASE}/membership_history/bulk`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(execPassword ? { "X-Exec-Password": execPassword } : {})
+    },
+    body: JSON.stringify({ person_ids: ids })
+  });
 
-    if (combined.length > 0) {
-      const ids = combined.map(p => p.Person_id);
-      const rows = await apiFetch(
-        `${API_BASE}/external_profiles?` +
-          ids.map(id => `person_ids=${id}`).join("&")
-      );
+  const text = await res.text();
+  if (!res.ok) {
+    console.error("Bulk history failed:", res.status, text);
+    setMemberships({});
+  } else {
+    setMemberships(JSON.parse(text));
+  }
+}
 
-      const profileMap = {};
-      if (Array.isArray(rows)) {
-        rows.forEach(p => (profileMap[p.Person_id] = p));
-      }
-      setExternalProfiles(profileMap);
-    } else {
-      setExternalProfiles({});
-    }
+// Bulk external profiles
+if (ids.length > 0) {
+  const res = await fetch(`${API_BASE}/external_profiles/bulk`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(execPassword ? { "X-Exec-Password": execPassword } : {})
+    },
+    body: JSON.stringify({ person_ids: ids })
+  });
 
-  };
+  const text = await res.text();
+  if (!res.ok) {
+    console.error("Bulk profiles failed:", res.status, text);
+    setExternalProfiles({});
+  } else {
+    const rows = JSON.parse(text);
+    const profileMap = {};
+    if (Array.isArray(rows)) rows.forEach(p => (profileMap[p.Person_id] = p));
+    setExternalProfiles(profileMap);
+  }
+} 
+
+};
 
   fetchData();
-}, [filters.alumniStatus, currentSemester, isValidSemester, isExecVerified]);
+}, [filters.alumniStatus, currentSemester, isValidSemester, isExecVerified, execPassword]);
 
   /* ---------------- Derived filters ---------------- */
 

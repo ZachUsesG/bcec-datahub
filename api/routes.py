@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, Query, Header, HTTPException
-from typing import List
+from typing import List, Dict, Any
 from db.logic import (
     get_active_members,
     get_alumni_members,
     get_membership_history
 )
 from db.session import SessionLocal
-from db.models import ExternalProfile
+from db.models import ExternalProfile, Membership
 
 from pydantic import BaseModel
 from datetime import datetime
@@ -187,5 +187,54 @@ def set_contact_status(
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        session.close()
+
+class BulkIdsIn(BaseModel):
+    person_ids: List[int]
+
+@router.post("/membership_history/bulk", tags=["membership"])
+def membership_history_bulk(payload: BulkIdsIn):
+    session = SessionLocal()
+    try:
+        ids = payload.person_ids or []
+        if not ids:
+            return {}
+
+        rows = (
+            session.query(Membership)
+            .filter(Membership.c.Person_id.in_(ids))
+            .order_by(Membership.c.Person_id.asc(), Membership.c.start_semester.desc())
+            .all()
+        )
+
+        out: Dict[int, List[Dict[str, Any]]] = {}
+        for r in rows:
+            d = dict(r._mapping)
+            pid = d["Person_id"]
+            out.setdefault(pid, []).append(d)
+
+        for pid in ids:
+            out.setdefault(pid, [])
+
+        return out
+    finally:
+        session.close()
+
+@router.post("/external_profiles/bulk", tags=["external_profiles"])
+def external_profiles_bulk(payload: BulkIdsIn):
+    session = SessionLocal()
+    try:
+        ids = payload.person_ids or []
+        if not ids:
+            return []
+
+        rows = (
+            session.query(ExternalProfile)
+            .filter(ExternalProfile.c.Person_id.in_(ids))
+            .all()
+        )
+
+        return [dict(r._mapping) for r in rows]
     finally:
         session.close()
