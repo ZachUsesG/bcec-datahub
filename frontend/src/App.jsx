@@ -6,6 +6,7 @@ const API_BASE = "";
 /* VITE_API_BASE=https://bcec-datahub-production.up.railway.app */
 
 const isValidSemesterFormat = s => /^\d{4}[SF]$/.test(s);
+const getPid = obj => obj?.Person_id ?? obj?.person_id ?? obj?.personId ?? obj?.personID ?? obj?.PersonID;
 
 const normalizeRole = role =>
   role === "ECP" ? "EVP" : role;
@@ -189,9 +190,10 @@ useEffect(() => {
       const safeActive = Array.isArray(activeData) ? activeData : [];
 
       const map = new Map();
-      [...safeAlumni, ...safeActive].forEach(p =>
-        map.set(p.Person_id, p)
-      );
+      [...safeAlumni, ...safeActive].forEach(p => {
+  const pid = getPid(p);
+  if (pid != null) map.set(pid, p);
+});
       combined = Array.from(map.values());
     } else {
       const endpoint =
@@ -208,9 +210,8 @@ useEffect(() => {
 setAlumni(combined);
 console.log("RAW alumni:", combined.length);
 
-const ids = combined
-  .map(p => p.Person_id ?? p.person_id ?? p.personId)
-  .filter(Boolean);
+const ids = combined.map(getPid).filter(Boolean);
+
 
 // Bulk membership history
 {
@@ -264,7 +265,7 @@ if (ids.length > 0) {
 
     const profileMap = {};
     rows.forEach(row => {
-      const pid = row.person_id ?? row.Person_id ?? row.personId;
+const pid = getPid(row);
       if (pid != null) profileMap[pid] = row;
     });
 
@@ -311,7 +312,7 @@ const filteredAlumni = useMemo(() => {
     .filter(Boolean);
 
   return alumni.filter(person => {
-const pid = person.Person_id ?? person.person_id ?? person.personId;
+const pid = getPid(person);
 const history = (pid != null ? memberships[pid] : []) || [];
 const p = (pid != null ? externalProfiles[pid] : {}) || {};
 
@@ -464,7 +465,7 @@ useEffect(() => {
             </div>
 
             {filteredAlumni.map(person => {
-              const pid = person.Person_id ?? person.person_id ?? person.personId;
+const pid = getPid(person);
               const history = memberships[pid] || [];
               const isEditing = !!editing[pid];
               const edit = editing[pid] || {};
@@ -629,11 +630,12 @@ const isManual =
   !!(p.manual_title || p.manual_company) || p.data_source === "manual";
 
 const sourceLabel = isManual
-  ? "Manual"
-  : (p.data_source ? p.data_source : "Unknown");
+  ? `Manual (base: ${p.data_source || "unknown"})`
+  : (p.data_source || "Unknown");
 
-const verified = p.last_verified_at ? `Verified: ${p.last_verified_at}` : null;
-const updated = p.manual_updated_at ? `Manual updated: ${p.manual_updated_at}` : null;
+const verified = p.last_verified_at ? `Verified semester: ${p.last_verified_at}` : null;
+const updatedAt = p.manual_updated_at ?? p.manual_updated_at_at ?? null;
+const updated = updatedAt ? `Manual updated: ${updatedAt}` : null;
 
 return (
   <div className="inline-display">
