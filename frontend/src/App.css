@@ -196,3 +196,26 @@ h1 {
   backdrop-filter: blur(4px);
   z-index: 9999;
 }
+
+.tiny {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 0.25rem;
+  line-height: 1.2;
+}
+
+.inline-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.inline-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.tiny.manual {
+  color: #ffb3b3;
+}
