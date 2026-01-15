@@ -232,6 +232,7 @@ const ids = combined
   }
 }
 
+// Bulk external profiles (ALWAYS normalize into a map)
 if (ids.length > 0) {
   const res = await fetch(`${API_BASE}/external_profiles/bulk`, {
     method: "POST",
@@ -243,23 +244,31 @@ if (ids.length > 0) {
   });
 
   const text = await res.text();
+
   if (!res.ok) {
     console.error("Bulk profiles failed:", res.status, text);
     setExternalProfiles({});
   } else {
-    const parsed = JSON.parse(text);
-
-    if (parsed && !Array.isArray(parsed) && typeof parsed === "object") {
-      setExternalProfiles(parsed);
-    } else {
-      const rows = Array.isArray(parsed) ? parsed : [];
-      const profileMap = {};
-      rows.forEach(p => {
-        const pid = p.Person_id ?? p.person_id ?? p.personId;
-        if (pid != null) profileMap[pid] = p;
-      });
-      setExternalProfiles(profileMap);
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      console.error("Bulk profiles JSON parse failed:", e, text);
+      setExternalProfiles({});
+      parsed = null;
     }
+
+    const rows = Array.isArray(parsed)
+      ? parsed
+      : (parsed && typeof parsed === "object" ? Object.values(parsed) : []);
+
+    const profileMap = {};
+    rows.forEach(row => {
+      const pid = row.person_id ?? row.Person_id ?? row.personId;
+      if (pid != null) profileMap[pid] = row;
+    });
+
+    setExternalProfiles(profileMap);
   }
 } else {
   setExternalProfiles({});
@@ -269,7 +278,7 @@ setLoading(false);
 };
 
   fetchData();
-}, [filters.alumniStatus, currentSemester, isValidSemester, isExecVerified]);
+}, [filters.alumniStatus, currentSemester, isValidSemester, isExecVerified, execPassword]);
 
   /* ---------------- Derived filters ---------------- */
 
