@@ -251,13 +251,14 @@ if (ids.length > 0) {
     const profileMap = {};
     if (Array.isArray(rows)) rows.forEach(p => (profileMap[p.Person_id] = p));
     setExternalProfiles(profileMap);
+    console.log("Sample external profile:", Object.values(profileMap)[0]);
   }
 } 
 
 };
 
   fetchData();
-}, [filters.alumniStatus, currentSemester, isValidSemester, isExecVerified, execPassword]);
+}, [filters.alumniStatus, currentSemester, isValidSemester, isExecVerified]);
 
   /* ---------------- Derived filters ---------------- */
 
@@ -291,23 +292,25 @@ const filteredAlumni = useMemo(() => {
 
   return alumni.filter(person => {
     const history = memberships[person.Person_id] || [];
-    const profile = externalProfiles[person.Person_id];
+    const p = externalProfiles[person.Person_id] || {};
 
     if (filters.name && !person.name?.toLowerCase().includes(filters.name.toLowerCase())) return false;
     if (filters.email && !person.email?.toLowerCase().includes(filters.email.toLowerCase())) return false;
     if (filters.linkedin && !person.linkedin?.toLowerCase().includes(filters.linkedin.toLowerCase())) return false;
 
-    if (
-      filters.graduationYear &&
-      !person.graduation_semester?.startsWith(filters.graduationYear)
-    ) return false;
+    if (filters.graduationYear && !person.graduation_semester?.startsWith(filters.graduationYear)) return false;
 
     if (filters.roles.size > 0 && !history.some(h => h.role && filters.roles.has(h.role))) return false;
     if (filters.committees.size > 0 && !history.some(h => h.committee && filters.committees.has(h.committee))) return false;
 
-    if (excluded.length > 0 && profile?.current_title) {
-      const title = profile.current_title.toLowerCase();
-      if (excluded.some(word => title.includes(word))) return false;
+    // ✅ exclude keywords using manual_title first, then current_title
+    const titleForExclusion = (
+      (p.manual_title ?? "") ||
+      (p.current_title ?? "")
+    ).toLowerCase();
+
+    if (excluded.length > 0 && titleForExclusion) {
+      if (excluded.some(word => titleForExclusion.includes(word))) return false;
     }
 
     return true;
@@ -343,7 +346,8 @@ useEffect(() => {
 
               <input type="password" placeholder="Exec password"
                 value={execPassword}
-                onChange={e => handlePasswordChange(e.target.value)} />
+                onChange={e => setExecPassword(e.target.value)}
+                onBlur={() => handlePasswordChange(execPassword)} />
 
               <input placeholder="Email" value={filters.email}
                 onChange={e => setFilters(f => ({ ...f, email: e.target.value }))} />
@@ -440,7 +444,7 @@ useEffect(() => {
 
             {filteredAlumni.map(person => {
               const history = memberships[person.Person_id] || [];
-              const profile = externalProfiles[person.Person_id];
+              const profile = externalProfiles[person.Person_id] || {};
               const isEditing = !!editing[person.Person_id];
               const edit = editing[person.Person_id] || {};
 
@@ -477,89 +481,207 @@ useEffect(() => {
   )}
 </div>
 
-{/* Where are they now (existing cell) */}
-<div className="muted">
-  {isEditing ? (
-    <>
-      {/* your existing manual edit inputs + Save/Cancel buttons */}
-      ...
-    </>
-  ) : (
-    <>
-      {/* your existing display + Edit button */}
-      ...
-    </>
-  )}
-</div>
-
-{/* Reached out? (NEW cell) */}
+{/* Where are they now */}
 <div className="muted">
   {(() => {
-    const contactStatus = profile?.contact_status || "not_yet";
-    const label =
-      CONTACT_STATUS_OPTIONS.find(o => o.value === contactStatus)?.label ||
-      "Not yet";
+  const p = externalProfiles[person.Person_id] || {};
+  const isEditing = !!editing[person.Person_id];
+  const edit = editing[person.Person_id] || {};
 
-    // non-exec sees read-only text
-    if (!isExecVerified) return label;
+  const title =
+    (p.manual_title ?? "").trim() ||
+    (p.current_title ?? "").trim() ||
+    "";
 
-    // exec sees dropdown + saves to backend
+  const company =
+    (p.manual_company ?? "").trim() ||
+    (p.current_company ?? "").trim() || // remove if not real
+    "";
+
+  const displayLine =
+    title && company ? `${title} @ ${company}` : (title || company || "—");
+
+  if (!isExecVerified) return <span>{displayLine}</span>;
+
+  if (isEditing) {
     return (
-      <>
-        <select
-          value={contactStatus}
-          onChange={async e => {
-            const next = e.target.value;
+      <div className="inline-edit">
+        <input
+          placeholder="Title"
+          value={edit.manual_title ?? p.manual_title ?? ""}
+          onChange={e =>
+            setEditing(prev => ({
+              ...prev,
+              [person.Person_id]: {
+                ...(prev[person.Person_id] || {}),
+                manual_title: e.target.value
+              }
+            }))
+          }
+        />
+        <input
+          placeholder="Company"
+          value={edit.manual_company ?? p.manual_company ?? ""}
+          onChange={e =>
+            setEditing(prev => ({
+              ...prev,
+              [person.Person_id]: {
+                ...(prev[person.Person_id] || {}),
+                manual_company: e.target.value
+              }
+            }))
+          }
+        />
+
+        <button
+          onClick={async () => {
+            const payload = {
+              manual_title: (edit.manual_title ?? p.manual_title ?? "").trim() || null,
+              manual_company: (edit.manual_company ?? p.manual_company ?? "").trim() || null
+            };
 
             const res = await fetch(
-              `${API_BASE}/external_profiles/${person.Person_id}/contact_status`,
+              `${API_BASE}/external_profiles/${person.Person_id}/manual`,
               {
                 method: "PATCH",
                 headers: {
                   "Content-Type": "application/json",
                   "X-Exec-Password": execPassword
                 },
-                body: JSON.stringify({ contact_status: next })
+                body: JSON.stringify(payload)
               }
             );
 
             const text = await res.text();
             if (!res.ok) {
-              console.error("Contact status save failed:", res.status, text);
-              alert("Failed to save contact status");
+              console.error("Manual override save failed:", res.status, text);
+              alert("Failed to save manual override");
               return;
-            }
-
-            let payload;
-            try {
-              payload = JSON.parse(text);
-            } catch {
-              payload = { contact_status: next, contact_status_updated_at: null };
             }
 
             setExternalProfiles(prev => ({
               ...prev,
               [person.Person_id]: {
                 ...(prev[person.Person_id] || {}),
-                contact_status: payload.contact_status || next,
-                contact_status_updated_at: payload.contact_status_updated_at || null
+                manual_title: payload.manual_title,
+                manual_company: payload.manual_company,
+                manual_updated_at: new Date().toISOString()
               }
             }));
+
+            setEditing(prev => {
+              const next = { ...prev };
+              delete next[person.Person_id];
+              return next;
+            });
           }}
         >
-          {CONTACT_STATUS_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          Save
+        </button>
 
-        {profile?.contact_status_updated_at && (
-          <div className="tiny">Updated {profile.contact_status_updated_at}</div>
-        )}
-      </>
+        <button
+          onClick={() => {
+            setEditing(prev => {
+              const next = { ...prev };
+              delete next[person.Person_id];
+              return next;
+            });
+          }}
+        >
+          Cancel
+        </button>
+      </div>
     );
-  })()}
+  }
+
+  return (
+    <div className="inline-display">
+      <div>{displayLine}</div>
+      <button
+        onClick={() =>
+          setEditing(prev => ({
+            ...prev,
+            [person.Person_id]: {
+              manual_title: p.manual_title ?? p.current_title ?? "",
+              manual_company: p.manual_company ?? p.current_company ?? ""
+            }
+          }))
+        }
+      >
+        Edit
+      </button>
+    </div>
+  );
+})()}
+</div>
+
+{/* Reached out? (NEW cell) */}
+<div className="muted">
+  {(() => {
+  const p = externalProfiles[person.Person_id] || {};
+  const contactStatus = p.contact_status || "not_yet";
+  const label =
+    CONTACT_STATUS_OPTIONS.find(o => o.value === contactStatus)?.label ||
+    "Not yet";
+
+  if (!isExecVerified) return label;
+
+  return (
+    <>
+      <select
+        value={contactStatus}
+        onChange={async e => {
+          const next = e.target.value;
+
+          const res = await fetch(
+            `${API_BASE}/external_profiles/${person.Person_id}/contact_status`,
+            {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Exec-Password": execPassword
+              },
+              body: JSON.stringify({ contact_status: next })
+            }
+          );
+
+          const text = await res.text();
+          if (!res.ok) {
+            console.error("Contact status save failed:", res.status, text);
+            alert("Failed to save contact status");
+            return;
+          }
+
+          let payload;
+          try {
+            payload = JSON.parse(text);
+          } catch {
+            payload = { contact_status: next, contact_status_updated_at: null };
+          }
+
+          setExternalProfiles(prev => ({
+            ...prev,
+            [person.Person_id]: {
+              ...(prev[person.Person_id] || {}),
+              contact_status: payload.contact_status || next,
+              contact_status_updated_at: payload.contact_status_updated_at || null
+            }
+          }));
+        }}
+      >
+        {CONTACT_STATUS_OPTIONS.map(o => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+
+      {p.contact_status_updated_at && (
+        <div className="tiny">Updated {p.contact_status_updated_at}</div>
+      )}
+    </>
+  );
+})()}
 </div>
                 </div>
               );
