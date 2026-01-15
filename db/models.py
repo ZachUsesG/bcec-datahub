@@ -1,4 +1,4 @@
-from sqlalchemy import Table, Column, MetaData, Text, Integer, String, ForeignKey
+from sqlalchemy import Table, Column, MetaData, Text, Integer, String, ForeignKey, text
 
 metadata = MetaData()
 
@@ -43,4 +43,7 @@ ExternalProfile = Table(
 
     Column("data_source", String(20), nullable=False),
     Column("last_verified_at", String(10), nullable=True),
+
+    Column("contact_status", String(40), nullable=False, server_default=text("'not_yet'")),
+    Column("contact_status_updated_at", String(30), nullable=True),
 )

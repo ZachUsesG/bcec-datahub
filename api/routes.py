@@ -95,6 +95,8 @@ class ManualOverrideIn(BaseModel):
     manual_company: str | None = None
     verified_semester: str | None = None
 
+class ContactStatusIn(BaseModel):
+    contact_status: str
 
 @router.patch("/external_profiles/{person_id}/manual")
 def set_manual_override(
@@ -136,5 +138,54 @@ def set_manual_override(
         session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+    finally:
+        session.close()
+
+ALLOWED_CONTACT_STATUSES = {
+    "not_yet",
+    "reached_out",
+    "consented",
+    "do_not_contact",
+}
+
+@router.patch("/external_profiles/{person_id}/contact_status")
+def set_contact_status(
+    person_id: int,
+    payload: ContactStatusIn,
+    _=Depends(require_exec_password),
+):
+    if payload.contact_status not in ALLOWED_CONTACT_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid contact_status")
+
+    session = SessionLocal()
+    try:
+        now = datetime.utcnow().isoformat()
+
+        values = {
+            "contact_status": payload.contact_status,
+            "contact_status_updated_at": now,
+        }
+
+        # Upsert: create ExternalProfile row if missing
+        from sqlalchemy.dialects.postgresql import insert
+
+        stmt = insert(ExternalProfile).values(
+            Person_id=person_id,
+            data_source="manual",
+            **values
+        )
+
+        stmt = stmt.on_conflict_do_update(
+            constraint="ExternalProfile_Person_id_key",
+            set_=values
+        )
+
+        session.execute(stmt)
+        session.commit()
+        return {"ok": True, **values}
+
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         session.close()
