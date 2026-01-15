@@ -209,7 +209,9 @@ setAlumni(combined);
 console.log("RAW alumni:", combined.length);
 setLoading(false);
 
-const ids = combined.map(p => p.Person_id);
+const ids = combined
+  .map(p => p.Person_id ?? p.person_id ?? p.personId)
+  .filter(Boolean);
 
 // Bulk membership history
 {
@@ -247,20 +249,20 @@ if (ids.length > 0) {
     console.error("Bulk profiles failed:", res.status, text);
     setExternalProfiles({});
   } else {
-    const rows = JSON.parse(text);
-if (parsed && !Array.isArray(parsed) && typeof parsed === "object") {
-  // backend returned a map already
-  setExternalProfiles(parsed);
-} else {
-  // backend returned an array
-  const rows = Array.isArray(parsed) ? parsed : [];
-  const profileMap = {};
-  rows.forEach(p => {
-    const pid = p.Person_id ?? p.person_id ?? p.personId;
-    if (pid != null) profileMap[pid] = p;
-  });
-  setExternalProfiles(profileMap);
-}
+    const parsed = JSON.parse(text);
+
+    // backend might return either an object map OR an array
+    if (parsed && !Array.isArray(parsed) && typeof parsed === "object") {
+      setExternalProfiles(parsed);
+    } else {
+      const rows = Array.isArray(parsed) ? parsed : [];
+      const profileMap = {};
+      rows.forEach(p => {
+        const pid = p.Person_id ?? p.person_id ?? p.personId;
+        if (pid != null) profileMap[pid] = p;
+      });
+      setExternalProfiles(profileMap);
+    }
   }
 } 
 
@@ -300,8 +302,9 @@ const filteredAlumni = useMemo(() => {
     .filter(Boolean);
 
   return alumni.filter(person => {
-    const history = memberships[person.Person_id] || [];
-    const p = externalProfiles[person.Person_id] || {};
+const pid = person.Person_id ?? person.person_id ?? person.personId;
+const history = (pid != null ? memberships[pid] : []) || [];
+const p = (pid != null ? externalProfiles[pid] : {}) || {};
 
     if (filters.name && !person.name?.toLowerCase().includes(filters.name.toLowerCase())) return false;
     if (filters.email && !person.email?.toLowerCase().includes(filters.email.toLowerCase())) return false;
@@ -312,7 +315,7 @@ const filteredAlumni = useMemo(() => {
     if (filters.roles.size > 0 && !history.some(h => h.role && filters.roles.has(h.role))) return false;
     if (filters.committees.size > 0 && !history.some(h => h.committee && filters.committees.has(h.committee))) return false;
 
-    // ✅ exclude keywords using manual_title first, then current_title
+    // exclude keywords using manual_title first, then current_title
     const titleForExclusion = (
       (p.manual_title ?? "") ||
       (p.current_title ?? "")
@@ -452,13 +455,15 @@ useEffect(() => {
             </div>
 
             {filteredAlumni.map(person => {
-              const history = memberships[person.Person_id] || [];
-              const profile = externalProfiles[person.Person_id] || {};
-              const isEditing = !!editing[person.Person_id];
-              const edit = editing[person.Person_id] || {};
+              const pid = person.Person_id ?? person.person_id ?? person.personId;
+              const history = memberships[pid] || [];
+              const isEditing = !!editing[pid];
+              const edit = editing[pid] || {};
 
-              return (
-                <div className="table-row" key={person.Person_id}>
+if (pid == null) return null;
+
+return (
+  <div className="table-row" key={pid}>
                   <div className="name">{person.name}</div>
 
                   <div className="muted">
@@ -493,9 +498,9 @@ useEffect(() => {
 {/* Where are they now */}
 <div className="muted">
   {(() => {
-  const p = externalProfiles[person.Person_id] || {};
-  const isEditing = !!editing[person.Person_id];
-  const edit = editing[person.Person_id] || {};
+  const p = externalProfiles[pid] || {};
+  const isEditing = !!editing[pid];
+  const edit = editing[pid] || {};
 
   const title =
     (p.manual_title ?? "").trim() ||
@@ -521,8 +526,8 @@ useEffect(() => {
           onChange={e =>
             setEditing(prev => ({
               ...prev,
-              [person.Person_id]: {
-                ...(prev[person.Person_id] || {}),
+              [pid]: {
+                ...(prev[pid] || {}),
                 manual_title: e.target.value
               }
             }))
@@ -534,8 +539,8 @@ useEffect(() => {
           onChange={e =>
             setEditing(prev => ({
               ...prev,
-              [person.Person_id]: {
-                ...(prev[person.Person_id] || {}),
+              [pid]: {
+                ...(prev[pid] || {}),
                 manual_company: e.target.value
               }
             }))
@@ -550,7 +555,7 @@ useEffect(() => {
             };
 
             const res = await fetch(
-              `${API_BASE}/external_profiles/${person.Person_id}/manual`,
+              `${API_BASE}/external_profiles/${pid}/manual`,
               {
                 method: "PATCH",
                 headers: {
@@ -570,8 +575,8 @@ useEffect(() => {
 
             setExternalProfiles(prev => ({
               ...prev,
-              [person.Person_id]: {
-                ...(prev[person.Person_id] || {}),
+              [pid]: {
+                ...(prev[pid] || {}),
                 manual_title: payload.manual_title,
                 manual_company: payload.manual_company,
                 manual_updated_at: new Date().toISOString()
@@ -580,7 +585,7 @@ useEffect(() => {
 
             setEditing(prev => {
               const next = { ...prev };
-              delete next[person.Person_id];
+              delete next[pid];
               return next;
             });
           }}
@@ -592,7 +597,7 @@ useEffect(() => {
           onClick={() => {
             setEditing(prev => {
               const next = { ...prev };
-              delete next[person.Person_id];
+              delete next[pid];
               return next;
             });
           }}
@@ -610,7 +615,7 @@ useEffect(() => {
         onClick={() =>
           setEditing(prev => ({
             ...prev,
-            [person.Person_id]: {
+            [pid]: {
               manual_title: p.manual_title ?? p.current_title ?? "",
               manual_company: p.manual_company ?? p.current_company ?? ""
             }
@@ -627,7 +632,7 @@ useEffect(() => {
 {/* Reached out? (NEW cell) */}
 <div className="muted">
   {(() => {
-  const p = externalProfiles[person.Person_id] || {};
+  const p = externalProfiles[pid] || {};
   const contactStatus = p.contact_status || "not_yet";
   const label =
     CONTACT_STATUS_OPTIONS.find(o => o.value === contactStatus)?.label ||
@@ -643,7 +648,7 @@ useEffect(() => {
           const next = e.target.value;
 
           const res = await fetch(
-            `${API_BASE}/external_profiles/${person.Person_id}/contact_status`,
+            `${API_BASE}/external_profiles/${pid}/contact_status`,
             {
               method: "PATCH",
               headers: {
@@ -670,8 +675,8 @@ useEffect(() => {
 
           setExternalProfiles(prev => ({
             ...prev,
-            [person.Person_id]: {
-              ...(prev[person.Person_id] || {}),
+            [pid]: {
+              ...(prev[pid] || {}),
               contact_status: payload.contact_status || next,
               contact_status_updated_at: payload.contact_status_updated_at || null
             }
