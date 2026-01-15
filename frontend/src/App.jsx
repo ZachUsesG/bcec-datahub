@@ -225,9 +225,9 @@ useEffect(() => {
 
   // Otherwise force off until verified
   setIsExecVerified(false);
-  sessionStorage.removeItem("execVerified");
-  setAccessRole("none");
-  sessionStorage.removeItem("accessRole");
+setAccessRole("none");
+sessionStorage.removeItem("execVerified");
+sessionStorage.removeItem("accessRole");
 
   verifyExecPassword(execPassword);
 
