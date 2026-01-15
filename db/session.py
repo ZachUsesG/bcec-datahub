@@ -13,7 +13,7 @@ ECHO_SQL = (ENV != "prod") and (os.getenv("SQL_ECHO", "0") == "1" or ENV == "dev
 if DATABASE_URL:
     engine = create_engine(
         DATABASE_URL,
-        echo=ECHO_SQL,   # <- change
+        echo=False,
         future=True
     )
 else:
