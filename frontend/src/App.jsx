@@ -46,7 +46,7 @@ const ROLE_GROUPS = {
     "VPP",
     "Webmaster"
   ],
-
+  
   Directors: [
     "Director of Beauty",
     "Directorof Digital Marketing",
@@ -82,6 +82,13 @@ const ROLE_GROUPS = {
     "CM",
   ]
 };
+
+const CONTACT_STATUS_OPTIONS = [
+  { value: "not_yet", label: "Not yet" },
+  { value: "reached_out", label: "Reached out" },
+  { value: "consented", label: "Consented for further interaction" },
+  { value: "do_not_contact", label: "Do not contact" }
+];
 
 function App() {
   const [alumni, setAlumni] = useState([]);
@@ -411,6 +418,8 @@ useEffect(() => {
               <div>Roles</div>
               <div>Committees</div>
               <div>Where are they now</div>
+
+              <div>Reached out?</div>
             </div>
 
             {filteredAlumni.map(person => {
@@ -446,138 +455,96 @@ useEffect(() => {
 })}
                   </div>
 
-                  <div className="muted">
-                    {history.filter(h => h.committee).map((h, i) =>
-                      <div key={i}>• {h.committee} ({h.start_semester})</div>
-                    )}
-                  </div>
+<div className="muted">
+  {history.filter(h => h.committee).map((h, i) =>
+    <div key={i}>• {h.committee} ({h.start_semester})</div>
+  )}
+</div>
 
-                  <div className="muted">
-                    {isEditing ? (
-                      <>
-                        <input placeholder="Manual title"
-                          value={edit.manual_title || ""}
-                          onChange={e => setEditing(prev => ({
-                            ...prev,
-                            [person.Person_id]: { ...edit, manual_title: e.target.value }
-                          }))} />
+{/* Where are they now (existing cell) */}
+<div className="muted">
+  {isEditing ? (
+    <>
+      {/* your existing manual edit inputs + Save/Cancel buttons */}
+      ...
+    </>
+  ) : (
+    <>
+      {/* your existing display + Edit button */}
+      ...
+    </>
+  )}
+</div>
 
-                        <input placeholder="Manual company"
-                          value={edit.manual_company || ""}
-                          onChange={e => setEditing(prev => ({
-                            ...prev,
-                            [person.Person_id]: { ...edit, manual_company: e.target.value }
-                          }))} />
+{/* Reached out? (NEW cell) */}
+<div className="muted">
+  {(() => {
+    const contactStatus = profile?.contact_status || "not_yet";
+    const label =
+      CONTACT_STATUS_OPTIONS.find(o => o.value === contactStatus)?.label ||
+      "Not yet";
 
-                        <input
-                          placeholder="Verification semester (e.g. 2026S)"
-                          value={edit.verified_semester || ""}
-                          onChange={e =>
-                            setEditing(prev => ({
-                              ...prev,
-                              [person.Person_id]: {
-                                ...edit,
-                                verified_semester: e.target.value.toUpperCase()
-                              }
-                            }))
-                          }
-                        />
+    // non-exec sees read-only text
+    if (!isExecVerified) return label;
 
-<button
-  type="button"
-  disabled={!isValidSemesterFormat(edit.verified_semester)}
-  onClick={async () => {
-    console.log("Saving for", person.Person_id, edit);
+    // exec sees dropdown + saves to backend
+    return (
+      <>
+        <select
+          value={contactStatus}
+          onChange={async e => {
+            const next = e.target.value;
 
-    const res = await fetch(
-        `${API_BASE}/external_profiles/${person.Person_id}/manual`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Exec-Password": execPassword
-        },
-        body: JSON.stringify({
-          manual_title: edit.manual_title || null,
-          manual_company: edit.manual_company || null,
-          verified_semester: edit.verified_semester
-        })
-      }
+            const res = await fetch(
+              `${API_BASE}/external_profiles/${person.Person_id}/contact_status`,
+              {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Exec-Password": execPassword
+                },
+                body: JSON.stringify({ contact_status: next })
+              }
+            );
+
+            const text = await res.text();
+            if (!res.ok) {
+              console.error("Contact status save failed:", res.status, text);
+              alert("Failed to save contact status");
+              return;
+            }
+
+            let payload;
+            try {
+              payload = JSON.parse(text);
+            } catch {
+              payload = { contact_status: next, contact_status_updated_at: null };
+            }
+
+            setExternalProfiles(prev => ({
+              ...prev,
+              [person.Person_id]: {
+                ...(prev[person.Person_id] || {}),
+                contact_status: payload.contact_status || next,
+                contact_status_updated_at: payload.contact_status_updated_at || null
+              }
+            }));
+          }}
+        >
+          {CONTACT_STATUS_OPTIONS.map(o => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+
+        {profile?.contact_status_updated_at && (
+          <div className="tiny">Updated {profile.contact_status_updated_at}</div>
+        )}
+      </>
     );
-const text = await res.text();
-console.log("Save response:", res.status, text);
-    if (!res.ok) {
-      alert("Invalid exec password");
-      return;
-    }
-
-    setExternalProfiles(prev => ({
-      ...prev,
-      [person.Person_id]: {
-        ...prev[person.Person_id],
-        manual_title: edit.manual_title || null,
-        manual_company: edit.manual_company || null,
-        last_verified_at: edit.verified_semester
-      }
-    }));
-
-    setEditing(prev => {
-      const copy = { ...prev };
-      delete copy[person.Person_id];
-      return copy;
-    });
-  }}
->
-  Save
-</button>
-
-<button
-  type="button"
-  onClick={() => {
-    setEditing(prev => {
-      const copy = { ...prev };
-      delete copy[person.Person_id];
-      return copy;
-    });
-  }}
->
-  Cancel
-</button>
-
-                      </>
-                    ) : (
-                      <>
-                        {profile?.manual_title ? (
-                          <>
-                            {profile.manual_title}
-                            {profile.manual_company && ` @ ${profile.manual_company}`}
-                            <div className="tiny">Manually entered</div>
-                          </>
-                        ) : profile?.current_title ? (
-                          `${profile.current_title} @ ${profile.current_company}`
-                        ) : "—"}
-
-                        {profile?.last_verified_at && (
-                          <div className="tiny">Verified {profile.last_verified_at}</div>
-                        )}
-
-                        {isExecVerified && (
-                          <button onClick={() =>
-                            setEditing({
-                              ...editing,
-                              [person.Person_id]: {
-                                manual_title: profile?.manual_title || profile?.current_title || "",
-                                manual_company: profile?.manual_company || profile?.current_company || "",
-                                verified_semester: ""
-                              }
-                            })
-                          }>
-                            Edit
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
+  })()}
+</div>
                 </div>
               );
             })}
