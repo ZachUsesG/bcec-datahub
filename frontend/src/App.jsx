@@ -509,8 +509,6 @@ return (
 <div className="muted">
   {(() => {
   const p = externalProfiles[pid] || {};
-  const isEditing = !!editing[pid];
-  const edit = editing[pid] || {};
 
   const title =
     (p.manual_title ?? "").trim() ||
@@ -519,7 +517,7 @@ return (
 
   const company =
     (p.manual_company ?? "").trim() ||
-    (p.current_company ?? "").trim() || // remove if not real
+    (p.current_company ?? "").trim() ||
     "";
 
   const displayLine =
@@ -564,17 +562,14 @@ return (
               manual_company: (edit.manual_company ?? p.manual_company ?? "").trim() || null
             };
 
-            const res = await fetch(
-              `${API_BASE}/external_profiles/${pid}/manual`,
-              {
-                method: "PATCH",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Exec-Password": execPassword
-                },
-                body: JSON.stringify(payload)
-              }
-            );
+            const res = await fetch(`${API_BASE}/external_profiles/${pid}/manual`, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Exec-Password": execPassword
+              },
+              body: JSON.stringify(payload)
+            });
 
             const text = await res.text();
             if (!res.ok) {
@@ -584,20 +579,21 @@ return (
             }
 
             let saved = null;
-try {
-  saved = JSON.parse(text);
-} catch {
-  saved = null;
-}
+            try {
+              saved = JSON.parse(text);
+            } catch {
+              saved = null;
+            }
 
             setExternalProfiles(prev => ({
               ...prev,
               [pid]: {
                 ...(prev[pid] || {}),
-    manual_title: saved?.manual_title ?? payload.manual_title,
-    manual_company: saved?.manual_company ?? payload.manual_company,
-    manual_updated_at: saved?.manual_updated_at ?? new Date().toISOString(),
-    data_source: saved?.data_source ?? prev?.[pid]?.data_source
+                manual_title: saved?.manual_title ?? payload.manual_title,
+                manual_company: saved?.manual_company ?? payload.manual_company,
+                manual_updated_at: saved?.manual_updated_at ?? new Date().toISOString(),
+                data_source: saved?.data_source ?? prev?.[pid]?.data_source,
+                last_verified_at: saved?.last_verified_at ?? prev?.[pid]?.last_verified_at
               }
             }));
 
@@ -626,42 +622,38 @@ try {
     );
   }
 
-const isManual =
-  !!(p.manual_title || p.manual_company) || p.data_source === "manual";
+  const isManual =
+    !!(p.manual_title || p.manual_company) || p.data_source === "manual";
 
-const sourceLabel = isManual
-  ? `Manual (base: ${p.data_source || "unknown"})`
-  : (p.data_source || "Unknown");
+  const semester = p.last_verified_at || "";
 
-const verified = p.last_verified_at ? `Verified semester: ${p.last_verified_at}` : null;
-const updatedAt = p.manual_updated_at ?? p.manual_updated_at_at ?? null;
-const updated = updatedAt ? `Manual updated: ${updatedAt}` : null;
+  const metaLine = isManual
+    ? `Manually entered${semester ? ` · ${semester}` : ""}`
+    : `${p.data_source || "Unknown"}${semester ? ` · ${semester}` : ""}`;
 
-return (
-  <div className="inline-display">
-    <div>{displayLine}</div>
+  return (
+    <div className="inline-display">
+      <div>{displayLine}</div>
 
-    <div className={`tiny ${isManual ? "manual" : ""}`}>
-      <span>{sourceLabel}</span>
-      {verified ? ` · ${verified}` : ""}
-      {updated ? ` · ${updated}` : ""}
+      <div className={`tiny ${isManual ? "manual" : ""}`}>
+        {metaLine}
+      </div>
+
+      <button
+        onClick={() =>
+          setEditing(prev => ({
+            ...prev,
+            [pid]: {
+              manual_title: p.manual_title ?? p.current_title ?? "",
+              manual_company: p.manual_company ?? p.current_company ?? ""
+            }
+          }))
+        }
+      >
+        Edit
+      </button>
     </div>
-
-    <button
-      onClick={() =>
-        setEditing(prev => ({
-          ...prev,
-          [pid]: {
-            manual_title: p.manual_title ?? p.current_title ?? "",
-            manual_company: p.manual_company ?? p.current_company ?? ""
-          }
-        }))
-      }
-    >
-      Edit
-    </button>
-  </div>
-);
+  );
 })()}
 </div>
 
