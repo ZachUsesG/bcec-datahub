@@ -13,6 +13,7 @@ from db.session import SessionLocal
 from db.models import ExternalProfile, Membership, Person
 
 from api.auth import (
+    get_role,              # NEW (Option B)
     is_exec,
     is_editor,
     require_exec_password,
@@ -28,19 +29,21 @@ router = APIRouter()
 @router.get("/exec/verify", tags=["auth"])
 def verify_exec(
     x_exec_password: str | None = Header(default=None),
-    x_editor_password: str | None = Header(default=None),
 ):
-    if is_exec(x_exec_password, x_editor_password):
-        return {"ok": True}
-    raise HTTPException(status_code=401, detail="Invalid exec/editor password")
+    role = get_role(x_exec_password)
+    if role == "none":
+        raise HTTPException(status_code=401, detail="Invalid password")
+    return {"ok": True, "role": role}  # "exec" or "editor"
 
 
+# Optional: keep this endpoint if you still want it.
+# With Option B it uses the SAME header, and simply confirms editor specifically.
 @router.get("/editor/verify", tags=["auth"])
 def verify_editor(
-    x_editor_password: str | None = Header(default=None),
+    x_exec_password: str | None = Header(default=None),
 ):
-    if is_editor(x_editor_password):
-        return {"ok": True}
+    if is_editor(x_exec_password):
+        return {"ok": True, "role": "editor"}
     raise HTTPException(status_code=401, detail="Invalid editor password")
 
 
@@ -52,11 +55,10 @@ def verify_editor(
 async def read_active(
     semester: str,
     x_exec_password: str | None = Header(default=None),
-    x_editor_password: str | None = Header(default=None),
 ):
     session = SessionLocal()
     try:
-        exec_user = is_exec(x_exec_password, x_editor_password)
+        exec_user = is_exec(x_exec_password)
         rows = get_active_members(session, semester)
 
         if exec_user:
@@ -71,11 +73,10 @@ async def read_active(
 async def read_alumni(
     semester: str,
     x_exec_password: str | None = Header(default=None),
-    x_editor_password: str | None = Header(default=None),
 ):
     session = SessionLocal()
     try:
-        exec_user = is_exec(x_exec_password, x_editor_password)
+        exec_user = is_exec(x_exec_password)
         rows = get_alumni_members(session, semester)
 
         if exec_user:
@@ -127,7 +128,7 @@ class ContactStatusIn(BaseModel):
 def set_manual_override(
     person_id: int,
     payload: ManualOverrideIn,
-    _=Depends(require_exec_password),  # exec OR editor
+    _=Depends(require_exec_password),  # exec OR editor (Option B uses X-Exec-Password)
 ):
     session = SessionLocal()
     try:
@@ -298,7 +299,7 @@ def _normalize_linkedin(url: str | None) -> str | None:
 def update_person(
     person_id: int,
     payload: PersonUpdateIn,
-    _=Depends(require_editor_password),  # editor only
+    _=Depends(require_editor_password),  # editor only (Option B uses X-Exec-Password)
 ):
     session = SessionLocal()
     try:

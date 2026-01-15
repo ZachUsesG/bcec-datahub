@@ -778,8 +778,10 @@ const metaLine = isManual
       </select>
 
       {p.contact_status_updated_at && (
-        <div className="tiny">Updated {p.contact_status_updated_at}</div>
-      )}
+  <div className="tiny">
+    Updated {p.contact_status_updated_at.slice(0, 10)}
+  </div>
+)}
     </>
   );
 })()}
