@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import "./App.css";
 
 const API_BASE = "";
@@ -92,6 +92,8 @@ const CONTACT_STATUS_OPTIONS = [
 ];
 
 function App() {
+  const verifiedPasswordRef = useRef(sessionStorage.getItem("execPasswordVerified") || "");
+  const verifyTimerRef = useRef(null);
   const [alumni, setAlumni] = useState([]);
   const [memberships, setMemberships] = useState({});
   const [externalProfiles, setExternalProfiles] = useState({});
@@ -131,44 +133,93 @@ function App() {
       });
 
       if (res.ok) {
-        setIsExecVerified(true);
-        sessionStorage.setItem("execVerified", "true");
-      } else {
+  setIsExecVerified(true);
+  sessionStorage.setItem("execVerified", "true");
+
+  verifiedPasswordRef.current = password;
+  sessionStorage.setItem("execPasswordVerified", password);
+} else {
         setIsExecVerified(false);
-        sessionStorage.removeItem("execVerified");
+  sessionStorage.removeItem("execVerified");
+  verifiedPasswordRef.current = "";
+  sessionStorage.removeItem("execPasswordVerified");
       }
     } catch {
       setIsExecVerified(false);
-      sessionStorage.removeItem("execVerified");
+  sessionStorage.removeItem("execVerified");
+  verifiedPasswordRef.current = "";
+  sessionStorage.removeItem("execPasswordVerified");
     }
   };
 
-  const handlePasswordChange = value => {
-    setExecPassword(value);
+const handlePasswordChange = value => {
+  setExecPassword(value);
 
-    if (value) {
-      sessionStorage.setItem("execPassword", value);
-      verifyExecPassword(value);
-    } else {
-      sessionStorage.removeItem("execPassword");
-      sessionStorage.removeItem("execVerified");
-      setIsExecVerified(false);
-    }
+  // Persist typed value
+  if (value) sessionStorage.setItem("execPassword", value);
+  else sessionStorage.removeItem("execPassword");
+
+  // Clear any pending verify
+  if (verifyTimerRef.current) clearTimeout(verifyTimerRef.current);
+
+  // If not exactly the verified password, drop exec immediately
+  if (value !== verifiedPasswordRef.current) {
+    setIsExecVerified(false);
+    sessionStorage.removeItem("execVerified");
+  }
+
+  // If empty, clear verified record and stop
+  if (!value) {
+    verifiedPasswordRef.current = "";
+    sessionStorage.removeItem("execPasswordVerified");
+    return;
+  }
+
+  // Debounced verify
+  verifyTimerRef.current = setTimeout(() => {
+    verifyExecPassword(value);
+  }, 200);
+};
+
+  useEffect(() => {
+  return () => {
+    if (verifyTimerRef.current) clearTimeout(verifyTimerRef.current);
   };
-  const apiFetch = async (url) => {
-    const res = await fetch(url, {
-      headers: execPassword
-        ? { "X-Exec-Password": execPassword }
-        : {}
-    });
+}, []);
+useEffect(() => {
+  if (!execPassword) return;
 
-    if (!res.ok) {
-      console.error("API error:", url, await res.text());
-      return null;
-    }
+  // If already verified for this exact password, keep exec on
+  if (
+    execPassword === verifiedPasswordRef.current &&
+    sessionStorage.getItem("execVerified") === "true"
+  ) {
+    setIsExecVerified(true);
+    return;
+  }
 
-    return res.json();
-  };
+  // Otherwise force off until verified
+  setIsExecVerified(false);
+  sessionStorage.removeItem("execVerified");
+
+  verifyExecPassword(execPassword);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+const apiFetch = async (url) => {
+  const res = await fetch(url, {
+    headers: isExecVerified && execPassword
+      ? { "X-Exec-Password": execPassword }
+      : {}
+  });
+
+  if (!res.ok) {
+    console.error("API error:", url, await res.text());
+    return null;
+  }
+
+  return res.json();
+};
   /* ---------------- Fetch data ---------------- */
 
 useEffect(() => {
@@ -219,7 +270,7 @@ const ids = combined.map(getPid).filter(Boolean);
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(execPassword ? { "X-Exec-Password": execPassword } : {})
+      ...(isExecVerified && execPassword ? { "X-Exec-Password": execPassword } : {})
     },
     body: JSON.stringify({ person_ids: ids })
   });
@@ -239,7 +290,7 @@ if (ids.length > 0) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(execPassword ? { "X-Exec-Password": execPassword } : {})
+      ...(isExecVerified && execPassword ? { "X-Exec-Password": execPassword } : {})
     },
     body: JSON.stringify({ person_ids: ids })
   });
@@ -279,7 +330,7 @@ setLoading(false);
 };
 
   fetchData();
-}, [filters.alumniStatus, currentSemester, isValidSemester, isExecVerified, execPassword]);
+}, [filters.alumniStatus, currentSemester, isValidSemester, isExecVerified]);
 
   /* ---------------- Derived filters ---------------- */
 
@@ -365,12 +416,12 @@ useEffect(() => {
             <div className="filter-row">
               <input placeholder="Name" value={filters.name}
                 onChange={e => setFilters(f => ({ ...f, name: e.target.value }))} />
-
-              <input type="password" placeholder="Exec password"
-                value={execPassword}
-                onChange={e => setExecPassword(e.target.value)}
-                onBlur={() => handlePasswordChange(execPassword)} />
-
+<input
+  type="password"
+  placeholder="Exec password"
+  value={execPassword}
+  onChange={e => handlePasswordChange(e.target.value)}
+/>
               <input placeholder="Email" value={filters.email}
                 onChange={e => setFilters(f => ({ ...f, email: e.target.value }))} />
 
@@ -508,153 +559,161 @@ return (
 {/* Where are they now */}
 <div className="muted">
   {(() => {
-  const p = externalProfiles[pid] || {};
+    const p = externalProfiles[pid] || {};
 
-  const title =
-    (p.manual_title ?? "").trim() ||
-    (p.current_title ?? "").trim() ||
-    "";
+    const title =
+      (p.manual_title ?? "").trim() ||
+      (p.current_title ?? "").trim() ||
+      "";
 
-  const company =
-    (p.manual_company ?? "").trim() ||
-    (p.current_company ?? "").trim() ||
-    "";
+    const company =
+      (p.manual_company ?? "").trim() ||
+      (p.current_company ?? "").trim() ||
+      "";
 
-  const displayLine =
-    title && company ? `${title} @ ${company}` : (title || company || "—");
+    const displayLine =
+      title && company ? `${title} @ ${company}` : (title || company || "—");
 
-  if (!isExecVerified) return <span>{displayLine}</span>;
+const isManual = p.data_source === "manual";
+const semester = p.last_verified_at || "";
 
-  if (isEditing) {
+const metaLine = isManual
+  ? `Manually entered${semester ? ` · ${semester}` : ""}`
+  : null;
+
+    const isEditing = !!editing[pid];
+    const edit = editing[pid] || {};
+
+    // NON-EXEC: show displayLine + metaLine (if manual), no edit controls
+    if (!isExecVerified) {
+      return (
+        <div className="inline-display">
+          <div>{displayLine}</div>
+          {metaLine && (
+            <div className="tiny manual">{metaLine}</div>
+          )}
+        </div>
+      );
+    }
+
+    // EXEC: existing edit/display logic
+    if (isEditing) {
+      return (
+        <div className="inline-edit">
+          <input
+            placeholder="Title"
+            value={edit.manual_title ?? p.manual_title ?? ""}
+            onChange={e =>
+              setEditing(prev => ({
+                ...prev,
+                [pid]: {
+                  ...(prev[pid] || {}),
+                  manual_title: e.target.value
+                }
+              }))
+            }
+          />
+          <input
+            placeholder="Company"
+            value={edit.manual_company ?? p.manual_company ?? ""}
+            onChange={e =>
+              setEditing(prev => ({
+                ...prev,
+                [pid]: {
+                  ...(prev[pid] || {}),
+                  manual_company: e.target.value
+                }
+              }))
+            }
+          />
+
+          <button
+            onClick={async () => {
+              const payload = {
+                manual_title: (edit.manual_title ?? p.manual_title ?? "").trim() || null,
+                manual_company: (edit.manual_company ?? p.manual_company ?? "").trim() || null
+              };
+
+              const res = await fetch(`${API_BASE}/external_profiles/${pid}/manual`, {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Exec-Password": execPassword
+                },
+                body: JSON.stringify(payload)
+              });
+
+              const text = await res.text();
+              if (!res.ok) {
+                console.error("Manual override save failed:", res.status, text);
+                alert("Failed to save manual override");
+                return;
+              }
+
+              let saved = null;
+              try { saved = JSON.parse(text); } catch { saved = null; }
+
+              setExternalProfiles(prev => ({
+                ...prev,
+                [pid]: {
+                  ...(prev[pid] || {}),
+                  manual_title: saved?.manual_title ?? payload.manual_title,
+                  manual_company: saved?.manual_company ?? payload.manual_company,
+                  manual_updated_at: saved?.manual_updated_at ?? new Date().toISOString(),
+                  data_source: saved?.data_source ?? prev?.[pid]?.data_source,
+                  last_verified_at: saved?.last_verified_at ?? prev?.[pid]?.last_verified_at
+                }
+              }));
+
+              setEditing(prev => {
+                const next = { ...prev };
+                delete next[pid];
+                return next;
+              });
+            }}
+          >
+            Save
+          </button>
+
+          <button
+            onClick={() => {
+              setEditing(prev => {
+                const next = { ...prev };
+                delete next[pid];
+                return next;
+              });
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      );
+    }
+
     return (
-      <div className="inline-edit">
-        <input
-          placeholder="Title"
-          value={edit.manual_title ?? p.manual_title ?? ""}
-          onChange={e =>
+      <div className="inline-display">
+        <div>{displayLine}</div>
+
+        {metaLine && (
+          <div className="tiny manual">{metaLine}</div>
+        )}
+
+        <button
+          onClick={() =>
             setEditing(prev => ({
               ...prev,
               [pid]: {
-                ...(prev[pid] || {}),
-                manual_title: e.target.value
+                manual_title: p.manual_title ?? p.current_title ?? "",
+                manual_company: p.manual_company ?? p.current_company ?? ""
               }
             }))
           }
-        />
-        <input
-          placeholder="Company"
-          value={edit.manual_company ?? p.manual_company ?? ""}
-          onChange={e =>
-            setEditing(prev => ({
-              ...prev,
-              [pid]: {
-                ...(prev[pid] || {}),
-                manual_company: e.target.value
-              }
-            }))
-          }
-        />
-
-        <button
-          onClick={async () => {
-            const payload = {
-              manual_title: (edit.manual_title ?? p.manual_title ?? "").trim() || null,
-              manual_company: (edit.manual_company ?? p.manual_company ?? "").trim() || null
-            };
-
-            const res = await fetch(`${API_BASE}/external_profiles/${pid}/manual`, {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Exec-Password": execPassword
-              },
-              body: JSON.stringify(payload)
-            });
-
-            const text = await res.text();
-            if (!res.ok) {
-              console.error("Manual override save failed:", res.status, text);
-              alert("Failed to save manual override");
-              return;
-            }
-
-            let saved = null;
-            try {
-              saved = JSON.parse(text);
-            } catch {
-              saved = null;
-            }
-
-            setExternalProfiles(prev => ({
-              ...prev,
-              [pid]: {
-                ...(prev[pid] || {}),
-                manual_title: saved?.manual_title ?? payload.manual_title,
-                manual_company: saved?.manual_company ?? payload.manual_company,
-                manual_updated_at: saved?.manual_updated_at ?? new Date().toISOString(),
-                data_source: saved?.data_source ?? prev?.[pid]?.data_source,
-                last_verified_at: saved?.last_verified_at ?? prev?.[pid]?.last_verified_at
-              }
-            }));
-
-            setEditing(prev => {
-              const next = { ...prev };
-              delete next[pid];
-              return next;
-            });
-          }}
         >
-          Save
-        </button>
-
-        <button
-          onClick={() => {
-            setEditing(prev => {
-              const next = { ...prev };
-              delete next[pid];
-              return next;
-            });
-          }}
-        >
-          Cancel
+          Edit
         </button>
       </div>
     );
-  }
-
-  const isManual =
-    !!(p.manual_title || p.manual_company) || p.data_source === "manual";
-
-  const semester = p.last_verified_at || "";
-
-  const metaLine = isManual
-    ? `Manually entered${semester ? ` · ${semester}` : ""}`
-    : `${p.data_source || "Unknown"}${semester ? ` · ${semester}` : ""}`;
-
-  return (
-    <div className="inline-display">
-      <div>{displayLine}</div>
-
-      <div className={`tiny ${isManual ? "manual" : ""}`}>
-        {metaLine}
-      </div>
-
-      <button
-        onClick={() =>
-          setEditing(prev => ({
-            ...prev,
-            [pid]: {
-              manual_title: p.manual_title ?? p.current_title ?? "",
-              manual_company: p.manual_company ?? p.current_company ?? ""
-            }
-          }))
-        }
-      >
-        Edit
-      </button>
-    </div>
-  );
-})()}
+  })()}
 </div>
 
 {/* Reached out? (NEW cell) */}
