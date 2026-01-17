@@ -219,3 +219,37 @@ h1 {
 .tiny.manual {
   color: #ffb3b3;
 }
+
+.table-row input {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  background: #111;
+  color: #eee;
+  border: 1px solid #444;
+  border-radius: 6px;
+}
+
+.inline-display button,
+.inline-edit button {
+  width: 100%;
+}
+
+.inline-display button,
+.inline-edit button {
+  width: fit-content;
+}
+
+.inline-edit input {
+  width: 100%;
+}
+
+.inline-display button,
+.inline-edit button {
+  width: fit-content;
+  white-space: nowrap;
+}
+
+.inline-edit input {
+  width: 100%;
+  min-width: 0;
+}
