@@ -129,7 +129,7 @@ function App() {
     sessionStorage.getItem("accessRole") || "none"
   );
 
-  const openPersonEdit = (pid, person, field) => {
+const openPersonEdit = (pid, person, field) => {
   setEditingPerson(prev => {
     const existing = prev[pid] || {};
     const existingValue =
@@ -141,12 +141,14 @@ function App() {
       ...prev,
       [pid]: {
         ...existing,
-        verified_semester: existing.verified_semester ?? currentSemester,
+        // was: existing.verified_semester ?? currentSemester
+        verified_semester: existing.verified_semester ?? "",
         [field]: { open: true, value: existingValue }
       }
     };
   });
 };
+
 
 const closePersonEdit = (pid, field) => {
   setEditingPerson(prev => {
@@ -175,7 +177,7 @@ const updatePersonDraft = (pid, field, value) => {
     ...prev,
     [pid]: {
       ...(prev[pid] || {}),
-      verified_semester: prev[pid]?.verified_semester ?? currentSemester,
+      verified_semester: prev[pid]?.verified_semester ?? "",
       [field]: { ...(prev[pid]?.[field] || {}), open: true, value }
     }
   }));
@@ -231,21 +233,24 @@ const savePersonField = async (pid, field) => {
   } catch {
     saved = null;
   }
-
+const manualMetaPatch =
+  field === "name"
+    ? { name_data_source: "manual", name_verified_semester: sem || null }
+    : { linkedin_data_source: "manual", linkedin_verified_semester: sem || null };
   // Don't keep verified_semester on the in-memory person record unless your GET returns it
-  const { verified_semester, ...personPatch } = payload;
+const { verified_semester, ...personPatch } = payload;
 
-  setAlumni(prev =>
-    prev.map(p => {
-      if (getPid(p) !== pid) return p;
+setAlumni(prev =>
+  prev.map(p => {
+    if (getPid(p) !== pid) return p;
 
-      // Always update the field you edited (name/linkedin)
-      const next = { ...p, ...personPatch };
+    const next = { ...p, ...personPatch, ...manualMetaPatch };
 
-      // If backend returns metadata fields, merge them too
-      return saved && typeof saved === "object" ? { ...next, ...saved } : next;
-    })
-  );
+    // If backend returns metadata too, keep it
+    return saved && typeof saved === "object" ? { ...next, ...saved } : next;
+  })
+);
+
 
   closePersonEdit(pid, field);
 };
@@ -686,11 +691,11 @@ useEffect(() => {
         onChange={e => updatePersonDraft(pid, "name", e.target.value)}
       />
 
-      <input
-        placeholder="Semester (e.g. 2026S)"
-        value={editingPerson[pid]?.verified_semester ?? currentSemester}
-        onChange={e => updatePersonSemester(pid, e.target.value)}
-      />
+<input
+  placeholder={`Semester (e.g. ${currentSemester})`}
+  value={editingPerson[pid]?.verified_semester ?? ""}
+  onChange={e => updatePersonSemester(pid, e.target.value)}
+/>
 
       <button onClick={() => savePersonField(pid, "name")}>Save</button>
       <button onClick={() => closePersonEdit(pid, "name")}>Cancel</button>
@@ -731,8 +736,8 @@ useEffect(() => {
       />
 
       <input
-        placeholder="Semester (e.g. 2026S)"
-        value={editingPerson[pid]?.verified_semester ?? currentSemester}
+        placeholder={`Semester (e.g. ${currentSemester})`}
+        value={editingPerson[pid]?.verified_semester ?? ""}
         onChange={e => updatePersonSemester(pid, e.target.value)}
       />
 
@@ -844,7 +849,7 @@ if (isEditing) {
       />
 
       <input
-        placeholder="Semester (e.g. 2026S)"
+        placeholder={`Semester (e.g. ${currentSemester})`}
         value={edit.last_verified_at ?? p.last_verified_at ?? ""}
         onChange={e =>
           setEditing(prev => ({
