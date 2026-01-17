@@ -804,12 +804,16 @@ useEffect(() => {
           const displayLine =
             title && company ? `${title} @ ${company}` : (title || company || "—");
 
-          const isManual = p.data_source === "manual";
-          const semester = p.last_verified_at || "";
+const hasManual =
+  !!(p.manual_title && String(p.manual_title).trim()) ||
+  !!(p.manual_company && String(p.manual_company).trim()) ||
+  !!(p.last_verified_at && String(p.last_verified_at).trim());
 
-          const metaLine = isManual
-            ? `Manually entered${semester ? ` · ${semester}` : ""}`
-            : null;
+const semester = (p.last_verified_at ?? "").trim();
+
+const metaLine = hasManual
+  ? `Manually entered${semester ? ` · ${semester}` : ""}`
+  : null;
 
           const isEditing = !!editing[pid];
 const edit = editing[pid] || {};
@@ -897,7 +901,7 @@ if (isEditing) {
               manual_company: saved?.manual_company ?? payload.manual_company,
               last_verified_at: saved?.last_verified_at ?? payload.last_verified_at,
               manual_updated_at: saved?.manual_updated_at ?? new Date().toISOString(),
-              data_source: saved?.data_source ?? prev?.[pid]?.data_source
+              data_source: "manual"
             }
           }));
 
