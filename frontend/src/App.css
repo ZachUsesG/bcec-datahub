@@ -1,45 +1,10 @@
+/* App.css (cleaned + aligned grid) */
+
+/* Page layout */
 #root {
   margin: 0;
   padding: 0;
   max-width: none;
-}
-h1 {
-  text-align: center;
-}
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }
 
 .container {
@@ -49,6 +14,7 @@ h1 {
 }
 
 h1 {
+  text-align: center;
   font-size: 3rem;
   margin-bottom: 1rem;
 }
@@ -58,18 +24,22 @@ h1 {
   font-size: 0.9rem;
 }
 
+/* Table wrapper */
 .table {
   max-width: 1200px;
   margin: 0 auto;
   overflow-x: auto;
 }
 
-
 .table-inner {
   min-width: 1200px;
   margin: 0 auto;
 }
 
+/*
+  IMPORTANT: Header and row use the exact same grid definition.
+  This is what guarantees column alignment.
+*/
 .table-header,
 .table-row {
   display: grid;
@@ -83,31 +53,74 @@ h1 {
     3.5fr   /* Where are they now */
     1.4fr;  /* Reached out? */
   column-gap: 1.5rem;
-  align-items: start;
+
+  /* Prevent “looks misaligned” issues */
+  align-items: stretch;            /* consistent cell height behavior */
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
 }
 
+/* Header */
 .table-header {
   font-weight: 600;
   border-bottom: 1px solid #444;
+  padding-top: 0.5rem;
   padding-bottom: 0.5rem;
 }
 
+/* Make each header cell behave like a row cell (helps perceived alignment) */
+.table-header > div {
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;             /* vertically centers header text */
+}
+
+/* Rows */
 .table-row {
   padding: 0.75rem 0;
   border-bottom: 1px solid #333;
 }
 
+/* Cells */
+.table-header div,
+.table-row div {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;                    /* critical for grid children */
+}
+
+/* Column-specific tweaks */
 .name {
   font-weight: 600;
   font-size: 1.05rem;
 }
 
-.table-header div,
-.table-row div {
-  word-break: break-word;
-  overflow-wrap: anywhere;
+.table-header div:nth-child(4),
+.table-row div:nth-child(4) {
+  white-space: nowrap;             /* Graduation semester stays on one line */
 }
 
+/* Filters */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.filter-row.actions {
+  grid-template-columns: 200px auto;
+  align-items: center;
+}
+
+/* Multi-select */
 .multi-select {
   min-height: 180px;
   width: 100%;
@@ -124,27 +137,7 @@ h1 {
   padding: 0.25rem 0.4rem;
 }
 
-.filters {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-.table-header {
-  padding-top: 0.5rem;
-}
-.filter-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 1rem;
-  align-items: start;
-}
-
-.filter-row.actions {
-  grid-template-columns: 200px auto;
-  align-items: center;
-}
-
+/* Exec banner */
 .exec-banner {
   margin: 1.25rem 0 1.5rem 0;
   padding: 1.1rem 1.25rem;
@@ -157,44 +150,15 @@ h1 {
   font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-
   text-align: left;
 }
 
-.edit-row {
-  background: #181818;
-  border-top: 1px solid #333;
-}
-
-.table-row > div:last-child input {
-  display: block;
-  width: 100%;
-  margin-bottom: 0.4rem;
-}
-
-.table-header div:nth-child(4),
-.table-row div:nth-child(4) {
-  white-space: nowrap;
-}
-
-.internal-tag {
-  position: fixed;
-  bottom: 12px;
-  right: 16px;
-
-  font-size: 0.7rem;
-  color: #777;
-  opacity: 0.7;
-
-  pointer-events: none; /* never blocks clicks */
-  user-select: none;
-
-  background: rgba(0, 0, 0, 0.35);
-  padding: 4px 8px;
-  border-radius: 6px;
-
-  backdrop-filter: blur(4px);
-  z-index: 9999;
+/* Inline edit/display blocks */
+.inline-display,
+.inline-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .tiny {
@@ -204,24 +168,14 @@ h1 {
   line-height: 1.2;
 }
 
-.inline-display {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.inline-edit {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
 .tiny.manual {
   color: #ffb3b3;
 }
 
+/* Inputs inside rows */
 .table-row input {
   width: 100%;
+  min-width: 0;
   padding: 0.35rem 0.5rem;
   background: #111;
   color: #eee;
@@ -229,27 +183,41 @@ h1 {
   border-radius: 6px;
 }
 
-.inline-display button,
-.inline-edit button {
+/* Selects (so they align visually with inputs) */
+.table-row select {
   width: 100%;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  background: #111;
+  color: #eee;
+  border: 1px solid #444;
+  border-radius: 6px;
 }
 
-.inline-display button,
-.inline-edit button {
-  width: fit-content;
-}
-
-.inline-edit input {
-  width: 100%;
-}
-
+/* Buttons */
 .inline-display button,
 .inline-edit button {
   width: fit-content;
   white-space: nowrap;
 }
 
-.inline-edit input {
-  width: 100%;
-  min-width: 0;
+/* Internal tag watermark */
+.internal-tag {
+  position: fixed;
+  bottom: 12px;
+  right: 16px;
+
+  font-size: 0.7rem;
+  color: #777;
+  opacity: 0.7;
+
+  pointer-events: none;
+  user-select: none;
+
+  background: rgba(0, 0, 0, 0.35);
+  padding: 4px 8px;
+  border-radius: 6px;
+
+  backdrop-filter: blur(4px);
+  z-index: 9999;
 }

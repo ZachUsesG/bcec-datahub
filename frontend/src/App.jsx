@@ -205,10 +205,19 @@ const savePersonField = async (pid, field) => {
 
   const value = (draft[field].value ?? "").trim() || null;
 
-  const payload =
-    field === "name"
-      ? { name: value, verified_semester: sem || null }
-      : { linkedin: value, verified_semester: sem || null };
+const payload =
+  field === "name"
+    ? {
+        name: value,
+        name_data_source: "manual",
+        name_verified_semester: sem || null
+      }
+    : {
+        linkedin: value,
+        linkedin_data_source: "manual",
+        linkedin_verified_semester: sem || null
+      };
+
 
   const res = await fetch(`${API_BASE}/people/${pid}`, {
     method: "PATCH",
@@ -233,23 +242,10 @@ const savePersonField = async (pid, field) => {
   } catch {
     saved = null;
   }
-const manualMetaPatch =
-  field === "name"
-    ? { name_data_source: "manual", name_verified_semester: sem || null }
-    : { linkedin_data_source: "manual", linkedin_verified_semester: sem || null };
-  // Don't keep verified_semester on the in-memory person record unless your GET returns it
-const { verified_semester, ...personPatch } = payload;
-
 setAlumni(prev =>
-  prev.map(p => {
-    if (getPid(p) !== pid) return p;
-
-    const next = { ...p, ...personPatch, ...manualMetaPatch };
-
-    // If backend returns metadata too, keep it
-    return saved && typeof saved === "object" ? { ...next, ...saved } : next;
-  })
+  prev.map(p => (getPid(p) !== pid ? p : { ...p, ...payload }))
 );
+
 
 
   closePersonEdit(pid, field);
